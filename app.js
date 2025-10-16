@@ -1,5 +1,5 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (verze 2025-10-17, stabilní + živá validace)
+//  app.js — Fyzika: Práce a výkon (verze 2025-10-17, s automatickým převodem jednotek)
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -61,6 +61,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---------- Přidávání řádku ----------
   document.getElementById("add-zapis-row-button")?.addEventListener("click", () => {
+    addZapisRow();
+  });
+
+  function addZapisRow(symbol = "-", value = "", unit = "-", baseHint = false) {
     const c = document.getElementById("zapis-container");
     if (!c) return;
 
@@ -79,14 +83,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const sSel = document.createElement("select");
     sSel.className = "zapis-symbol p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500";
     sy.forEach(x => { const o = document.createElement("option"); o.value = x; o.textContent = x; sSel.appendChild(o); });
+    sSel.value = symbol;
 
     const val = document.createElement("input");
-    val.type = "text"; val.placeholder = "Hodnota";
+    val.type = "text"; val.placeholder = "Hodnota"; val.value = value;
     val.className = "zapis-value p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500";
 
     const uSel = document.createElement("select");
     uSel.className = "zapis-unit p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500";
     un.forEach(x => { const o = document.createElement("option"); o.value = x; o.textContent = x; uSel.appendChild(o); });
+    uSel.value = unit;
 
     const lab = document.createElement("label");
     lab.className = "flex items-center gap-2 text-sm text-gray-300";
@@ -100,41 +106,26 @@ document.addEventListener("DOMContentLoaded", () => {
       else { if (val.value === "?") val.value = ""; val.disabled = false; }
     });
 
+    [sSel, val, uSel, cb].forEach(el => {
+      el.addEventListener("input", () => validateAndRender());
+      el.addEventListener("change", () => validateAndRender());
+    });
+
     row.append(sSel, val, uSel, lab);
     c.appendChild(row);
-    // Aktivace validace pro nové prvky
-[sSel, val, uSel, cb].forEach(el => {
-  el.addEventListener("input", () => {
-    const { errors, warnings } = validateZapis();
-    renderLiveIssues(errors, warnings);
-  });
-  el.addEventListener("change", () => {
-    const { errors, warnings } = validateZapis();
-    renderLiveIssues(errors, warnings);
-  });
-});
 
-  });
+    if (baseHint) {
+      const hint = document.createElement("div");
+      hint.className = "text-sm text-yellow-400 mt-1 italic col-span-4";
+      hint.textContent = "💡 Převeď tuto veličinu na základní jednotku.";
+      c.appendChild(hint);
+    }
+  }
 
   // ---------- Nový příklad ----------
   document.getElementById("new-problem-button")?.addEventListener("click", () => {
     generateProblem();
     resetToZapis(true);
-  });
-
-  // ---------- Kontrola zápisu ----------
-  document.getElementById("check-zapis-button")?.addEventListener("click", () => {
-    const { errors, warnings, summary } = validateZapis();
-    renderSummary(summary);
-    renderIssues(errors, warnings);
-    if (errors.length === 0) {
-      feedback("✅ Zápis v pořádku! Pokračuj na výpočet.", true);
-      document.getElementById("zapis-step")?.classList.add("hidden");
-      document.getElementById("vypocet-step")?.classList.remove("hidden");
-      renderReview(summary);
-    } else {
-      feedback("❌ Zápis obsahuje chyby – oprav je, než budeš pokračovat.", false);
-    }
   });
 
   // ---------- Databáze příkladů ----------
@@ -162,7 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("problem-text").textContent = ex.text;
   }
 
-  // ---------- Validace zápisu ----------
+  // ---------- Validace ----------
   const unitSets = {
     length: ["mm", "cm", "m", "km"],
     energy: ["J", "kJ", "MJ"],
@@ -196,50 +187,54 @@ document.addEventListener("DOMContentLoaded", () => {
       const raw = r.querySelector(".zapis-value").value.trim();
       const unk = r.querySelector(".zapis-unknown").checked;
       const val = (!unk && raw && raw != "?") ? Number(raw.replace(",", ".")) : null;
-      return { symbol: s, unit: u, value: val, raw, unknown: unk };
+      return { symbol: s, unit: u, value: val, raw, unknown: unk, row: r };
     });
   }
 
   function validateZapis() {
-    const z = collect(), errors = [], warnings = [];
+    const z = collect(), errors = [], warnings = [], conversions = [];
     const summary = z.map((r, i) => `${i + 1}. ${r.symbol} = ${r.unknown ? "?" : r.raw || ""} ${r.unit}`).join("\n");
+    const g = currentProblem?.givens || [];
+
     z.forEach(r => {
       const k = symbolToKind[r.symbol];
-      if (k && !unitSets[k].includes(r.unit)) errors.push(`Veličina ${r.symbol} neodpovídá jednotce ${r.unit}.`);
+      if (!k) return;
+      if (!unitSets[k].includes(r.unit)) {
+        errors.push(`Veličina ${r.symbol} neodpovídá jednotce ${r.unit}.`);
+      }
     });
-    const g = currentProblem?.givens || [];
+
     g.forEach(gv => {
       const k = symbolToKind[gv.symbol];
       const r = z.find(x => x.symbol == gv.symbol && !x.unknown);
       if (!r) return;
-      if (r.raw == "?" || r.value == null) { errors.push(`U ${gv.symbol} chybí hodnota.`); return; }
+      if (r.raw == "?" || r.value == null) {
+        errors.push(`U ${gv.symbol} chybí hodnota.`);
+        return;
+      }
       const bg = toBase(gv.value, gv.unit, k), br = toBase(r.value, r.unit, k);
       if (bg == null || br == null) return;
       if (nearly(bg, br)) {
         const base = baseUnit[k];
-        if (gv.unit !== base && r.unit === gv.unit)
+        if (gv.unit !== base && r.unit === gv.unit) {
           warnings.push(`${gv.symbol} je v ${r.unit} – převeď na ${base}.`);
+          conversions.push({ symbol: r.symbol, base });
+        }
       } else errors.push(`${gv.symbol} neodpovídá zadání.`);
     });
-    if (z.length === 0) errors.push("Zápis je prázdný – přidej alespoň jednu veličinu.");
-    return { errors, warnings, summary };
+
+    return { errors, warnings, summary, conversions };
   }
 
-  // ---------- ŽIVÁ VALIDACE ----------
-  function attachLiveValidation() {
-    const container = document.getElementById("zapis-container");
-    if (!container) return;
-    container.addEventListener("input", debounce(() => {
-      const { errors, warnings } = validateZapis();
-      renderLiveIssues(errors, warnings);
-    }, 400));
+  function validateAndRender() {
+    const { errors, warnings, conversions } = validateZapis();
+    renderLiveIssues(errors, warnings);
+    if (conversions.length > 0) {
+      conversions.forEach(c => addZapisRow(c.symbol, "", c.base, true));
+    }
   }
 
-  function debounce(fn, delay) {
-    let timer;
-    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
-  }
-
+  // ---------- Zpětná vazba ----------
   function renderLiveIssues(errors, warnings) {
     const fb = document.getElementById("zapis-feedback-container");
     if (!fb) return;
@@ -256,62 +251,16 @@ document.addEventListener("DOMContentLoaded", () => {
     fb.innerHTML = html.join("");
   }
 
-  // ---------- Pomocné funkce ----------
-  function renderSummary(text) {
-    const fb = document.getElementById("zapis-feedback-container");
-    fb.innerHTML = `<div class="p-3 bg-gray-900 border border-gray-700 rounded mb-3">
-      <div class="font-semibold mb-2 text-gray-300">Souhrn zápisu:</div>
-      <pre class="text-gray-200 text-sm whitespace-pre-wrap">${text}</pre>
-    </div>`;
-  }
-
-  function renderIssues(errors, warnings) {
-    const fb = document.getElementById("zapis-feedback-container");
-    const arr = [];
-    if (errors.length)
-      arr.push(`<div class="feedback-wrong"><b>Chyby:</b><ul>${errors.map(e => `<li>${e}</li>`).join("")}</ul></div>`);
-    if (warnings.length)
-      arr.push(`<div class="feedback-correct"><b>Doporučení:</b><ul>${warnings.map(w => `<li>${w}</li>`).join("")}</ul></div>`);
-    if (!errors.length && !warnings.length)
-      arr.push(`<div class="feedback-correct">👍 Zápis je v pořádku.</div>`);
-    fb.insertAdjacentHTML("beforeend", arr.join(""));
-  }
-
-  function renderReview(text) {
-    const r = document.getElementById("zapis-review-container");
-    r.innerHTML = `<div class="p-3 bg-gray-900 border border-gray-700 rounded">
-      <div class="font-semibold mb-2 text-gray-300">Souhrn zápisu:</div>
-      <pre class="text-gray-200 text-sm whitespace-pre-wrap">${text}</pre>
-    </div>`;
-  }
-
   function resetToZapis(addRow = false) {
     document.getElementById("zapis-step")?.classList.remove("hidden");
     document.getElementById("vypocet-step")?.classList.add("hidden");
     document.getElementById("result-step")?.classList.add("hidden");
     const c = document.getElementById("zapis-container");
     const fb = document.getElementById("zapis-feedback-container");
-    const rv = document.getElementById("zapis-review-container");
     if (c) c.innerHTML = "";
     if (fb) fb.innerHTML = "";
-    if (rv) rv.innerHTML = "";
-    if (addRow) document.getElementById("add-zapis-row-button")?.click();
+    if (addRow) addZapisRow();
   }
 
-  function feedback(msg, ok) {
-    const fb = document.getElementById("zapis-feedback-container");
-    if (!fb) return;
-    const el = document.createElement("div");
-    el.className = ok ? "feedback-correct mt-2" : "feedback-wrong mt-2";
-    el.textContent = msg;
-    fb.appendChild(el);
-    const step = document.getElementById("zapis-step");
-    if (step) {
-      step.classList.add("ring-2", ok ? "ring-green-500" : "ring-red-500");
-      setTimeout(() => step.classList.remove("ring-2", "ring-green-500", "ring-red-500"), 600);
-    }
-  }
-
- // attachLiveValidation();
   console.log("✅ Logika aplikace úspěšně načtena.");
 });

@@ -1,5 +1,5 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (verze 2025-10, funkční + interaktivní)
+//  app.js — Fyzika: Práce a výkon (verze 2025-10, dynamické řádky zápisu)
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -143,48 +143,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // === Přidání řádku zápisu ===
         case "add-zapis-row-button": {
-  console.log("➕ Přidat novou veličinu do zápisu");
+          console.log("➕ Přidat novou veličinu do zápisu");
 
-  const zapisStep = document.getElementById("zapis-step");
-  const zapisContainer = document.getElementById("zapis-container");
+          const zapisContainer = document.getElementById("zapis-container");
+          if (!zapisContainer) {
+            console.error("❌ Není nalezen #zapis-container");
+            break;
+          }
 
-  if (!zapisContainer) {
-    console.error("❌ Není nalezen #zapis-container");
-    break;
-  }
+          // Seznamy veličin a jednotek podle obtížnosti
+          const veličinyEasy = ["-", "F", "s", "W"];
+          const jednotkyEasy = ["-", "cm", "m", "km", "J", "kJ", "MJ", "N", "kN", "MN"];
 
-  // pro jistotu zviditelnit krok Zápis
-  zapisStep?.classList.remove("hidden");
+          let availableSymbols = veličinyEasy;
+          let availableUnits = jednotkyEasy;
+          if (selectedLevel === "hard") {
+            availableSymbols = ["-", "F", "s", "W", "P", "t", "v", "m"];
+            availableUnits = ["-", "mm", "cm", "m", "km", "J", "kJ", "MJ", "N", "kN", "MN", "W", "kW", "MW"];
+          }
 
-  // vytvoř řádek + výrazné orámování kvůli ověření
-  const row = document.createElement("div");
-  row.className = "grid grid-cols-1 sm:grid-cols-3 gap-2 zapis-row mt-2";
-  row.style.border = "1px dashed #4b5563";
-  row.style.padding = "8px";
-  row.style.borderRadius = "10px";
-  row.style.background = "#0b1220";
+          const veličinyHTML = availableSymbols.map(v => `<option value="${v}">${v}</option>`).join("");
+          const jednotkyHTML = availableUnits.map(u => `<option value="${u}">${u}</option>`).join("");
 
-  row.innerHTML = `
-    <input type="text" placeholder="Veličina (např. F)"
-           class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
-    <input type="number" placeholder="Hodnota (např. 12)"
-           class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
-    <input type="text" placeholder="Jednotka (např. N)"
-           class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
-  `;
+          const row = document.createElement("div");
+          row.className = "grid grid-cols-1 sm:grid-cols-3 gap-2 zapis-row mt-2 p-2 rounded-lg bg-gray-800 border border-gray-700";
 
-  zapisContainer.appendChild(row);
+          row.innerHTML = `
+            <select class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500">
+              ${veličinyHTML}
+            </select>
+            <input type="number" placeholder="Hodnota" 
+                   class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500">
+            <select class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500">
+              ${jednotkyHTML}
+            </select>
+          `;
 
-  // diagnostika: kolik máme řádků?
-  const count = zapisContainer.querySelectorAll(".zapis-row").length;
-  console.log(`✅ Nový řádek přidán. Celkem řádků: ${count}`);
-
-  // zviditelnit kontejner a poscrollovat k novému řádku
-  ensureVisible(zapisContainer);
-  row.scrollIntoView({ behavior: "smooth", block: "center" });
-  break;
-}
-
+          zapisContainer.appendChild(row);
+          console.log("✅ Nový řádek zápisu přidán");
+          break;
+        }
 
         case "new-problem-button":
           console.log("🔁 Nový příklad");
@@ -217,7 +215,6 @@ document.addEventListener("DOMContentLoaded", () => {
   //  GENERÁTOR PŘÍKLADŮ
   // ====================================================================
   const problemText = document.getElementById("problem-text");
-  const resultLabel = document.getElementById("result-label");
   const unitSelect = document.getElementById("unit-select");
   const feedbackContainer = document.getElementById("vypocet-feedback-container");
 
@@ -257,25 +254,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("formula-input").value = "";
     document.getElementById("substitution-input").value = "";
   }
-
-  // ====================================================================
-  //  OVĚŘENÍ VÝPOČTU
-  // ====================================================================
-  const checkCalculationButton = document.getElementById("check-calculation-button");
-
-  checkCalculationButton?.addEventListener("click", () => {
-    const answer = parseFloat(document.getElementById("user-answer").value);
-    if (isNaN(answer)) {
-      showFeedback("Zadejte číselný výsledek.", false);
-      return;
-    }
-
-    const correct = Math.abs(answer - currentProblem.result) < 1;
-    if (correct)
-      showFeedback("✅ Správně!", true);
-    else
-      showFeedback(`❌ Špatně. Správný výsledek je ${currentProblem.result.toFixed(1)} ${unitSelect.value}.`, false);
-  });
 
   // ====================================================================
   //  TUTORIÁL

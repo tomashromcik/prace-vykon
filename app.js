@@ -88,45 +88,33 @@ document.addEventListener("DOMContentLoaded", () => {
 function attachPracticeListeners() {
   console.log("🧩 Aktivace tlačítek v režimu příkladů...");
 
-  const checkButton = document.getElementById("check-calculation-button");
-  const newProblemBtn = document.getElementById("new-problem-button");
-  const openCalc = document.getElementById("open-calculator-button");
-  const openFormula = document.getElementById("open-formula-button");
-  const openDiagram = document.getElementById("open-diagram-button");
+  const ids = [
+    "new-problem-button",
+    "check-calculation-button",
+    "open-calculator-button",
+    "open-formula-button",
+    "open-diagram-button",
+    "open-help-button",
+    "add-zapis-row-button",
+    "check-zapis-button",
+    "check-mass-calculation-button",
+    "check-force-calculation-button",
+    "check-work-calculation-button",
+    "next-button"
+  ];
 
-  if (checkButton) {
-    checkButton.addEventListener("click", () => {
-      console.log("🧮 Kliknuto na Ověřit výpočet");
-    });
-  }
-  if (newProblemBtn) {
-    newProblemBtn.addEventListener("click", () => {
-      console.log("🔁 Nový příklad v režimu příkladů");
-      generateNewProblem();
-    });
-  }
-  if (openCalc) {
-    openCalc.addEventListener("click", () => console.log("🧠 Otevřít kalkulačku"));
-  }
-  if (openFormula) {
-    openFormula.addEventListener("click", () => console.log("📘 Otevřít vzorec"));
-  }
-  if (openDiagram) {
-    openDiagram.addEventListener("click", () => console.log("📊 Otevřít schéma"));
-  }
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("click", () => {
+        console.log(`🟢 Klik: ${id}`);
+      });
+    } else {
+      console.warn(`⚠️ Nenalezen prvek s ID: ${id}`);
+    }
+  });
 }
 
-
-  backButton?.addEventListener("click", () => {
-    console.log("⬅️ Zpět na úvod");
-    setupScreen?.classList.remove("hidden");
-    practiceScreen?.classList.add("hidden");
-  });
-
-  newProblemButton?.addEventListener("click", () => {
-    console.log("🔁 Nový příklad");
-    generateNewProblem();
-  });
 
   // ====================================================================
   //  GENERÁTOR PŘÍKLADŮ

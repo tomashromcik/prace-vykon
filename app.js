@@ -1,6 +1,7 @@
 // ====================================================================
 //  app.js — Fyzika: Práce a výkon (verze 2025-10-19)
-//  + SVG kouzelný trojúhelník, kalkulačka, nápověda, obrázek
+//  + dynamické SVG vzorce a obrázky
+//  + plně funkční kalkulačka s kopírováním
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -100,12 +101,14 @@ document.addEventListener("DOMContentLoaded", () => {
       text = `Těleso bylo přesunuto silou ${FkN} kN po dráze ${s_m} m. Jaká práce byla vykonána?`;
       givens = [{ symbol: "F", value: FkN, unit: "kN" }, { symbol: "s", value: s_m, unit: "m" }];
       result = (FkN * 1000) * s_m;
+      selectedTopic = "prace";
     } else {
       const s_km = randInt(1, 5);
       const F_N = randInt(800, 2000);
       text = `Auto jelo rovnoměrným přímočarým pohybem po dráze ${s_km} km. Tahová síla motoru byla ${F_N} N.`;
       givens = [{ symbol: "s", value: s_km, unit: "km" }, { symbol: "F", value: F_N, unit: "N" }];
       result = (s_km * 1000) * F_N;
+      selectedTopic = "prace";
     }
 
     currentProblem = { text, givens, result };
@@ -284,86 +287,6 @@ document.addEventListener("DOMContentLoaded", () => {
     modal.classList.toggle("hidden", !show);
   }
 
-  // Otevření modálů
-  document.getElementById("open-calculator-button").onclick = () => toggleModal("calculator-modal", true);
-  document.getElementById("open-formula-button").onclick = () => {
-    renderFormulaTriangle();
-    toggleModal("formula-modal", true);
-  };
-  document.getElementById("open-diagram-button").onclick = () => {
-    renderDiagram();
-    toggleModal("diagram-modal", true);
-  };
-  document.getElementById("open-help-button").onclick = () => {
-    renderHelp();
-    toggleModal("help-modal", true);
-  };
-
-  // Zavření modálů
-  ["calculator", "formula", "diagram", "help"].forEach(name => {
-    const modal = document.getElementById(`${name}-modal`);
-    const closeBtn = document.getElementById(`close-${name}-button`);
-    closeBtn.addEventListener("click", () => toggleModal(`${name}-modal`, false));
-    modal.addEventListener("click", e => { if (e.target === modal) toggleModal(`${name}-modal`, false); });
-  });
-
-  // ---------- SVG TROJÚHELNÍK ----------
-  function renderFormulaTriangle() {
-    const c = document.getElementById("formula-svg-container");
-    c.innerHTML = `
-      <svg width="200" height="160" viewBox="0 0 200 160">
-        <polygon points="100,10 10,150 190,150" fill="none" stroke="white" stroke-width="2"/>
-        <line x1="45" y1="100" x2="155" y2="100" stroke="white" stroke-width="2"/>
-        <text x="100" y="60" fill="white" font-size="32" text-anchor="middle">W</text>
-        <text x="65" y="135" fill="white" font-size="28" text-anchor="middle">F</text>
-        <text x="135" y="135" fill="white" font-size="28" text-anchor="middle">s</text>
-      </svg>`;
-  }
-
-  // ---------- SVG OBRÁZEK ----------
-  function renderDiagram() {
-    const c = document.getElementById("diagram-svg-container");
-    c.innerHTML = `
-      <svg width="250" height="160" viewBox="0 0 250 160">
-        <rect x="20" y="120" width="210" height="8" fill="#888"/>
-        <rect x="60" y="90" width="60" height="30" fill="#00AEEF" stroke="white" stroke-width="2"/>
-        <circle cx="70" cy="125" r="8" fill="#333"/>
-        <circle cx="110" cy="125" r="8" fill="#333"/>
-        <text x="130" y="80" fill="white" font-size="14">F</text>
-        <line x1="130" y1="75" x2="180" y2="75" stroke="red" stroke-width="2" marker-end="url(#arrowhead)"/>
-        <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="red"/>
-          </marker>
-        </defs>
-      </svg>`;
-  }
-
-  // ---------- NÁPOVĚDA ----------
-  function renderHelp() {
-    const c = document.getElementById("help-content");
-    if (selectedMode === "practice") {
-      const rows = collect();
-      const next = rows.find(r => r.symbol === "-" || r.raw === "");
-      if (next)
-        c.innerHTML = "💬 Zkus doplnit další veličinu podle zadání (např. F, s nebo W).";
-      else
-        c.innerHTML = "✅ Výborně! Zápis vypadá kompletní.";
-    } else {
-      c.innerHTML = "Nápověda je k dispozici pouze v režimu procvičování.";
-    }
-  }
-  // ---------- MODÁLY ----------
-  function toggleModal(id, show) {
-    const modal = document.getElementById(id);
-    if (!modal) {
-      console.warn(`⚠️ Modal '${id}' nebyl nalezen.`);
-      return;
-    }
-    modal.classList.toggle("hidden", !show);
-  }
-
-  // Bezpečně přiřadíme kliky, až když tlačítka existují
   const btnMap = {
     "open-calculator-button": "calculator-modal",
     "open-formula-button": "formula-modal",
@@ -381,12 +304,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (btnId === "open-help-button") renderHelp();
         toggleModal(modalId, true);
       });
-    } else {
-      console.warn(`⚠️ Tlačítko '${btnId}' nebylo nalezeno.`);
     }
   });
 
-  // Zavírání modálů
   ["calculator", "formula", "diagram", "help"].forEach(name => {
     const modal = document.getElementById(`${name}-modal`);
     const closeBtn = document.getElementById(`close-${name}-button`);
@@ -398,5 +318,51 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  console.log("✅ Logika aplikace úspěšně načtena.");
-});
+  // ---------- SVG VZOREC ----------
+  function renderFormulaTriangle() {
+    const c = document.getElementById("formula-svg-container");
+    let formulaSVG = "";
+    if (selectedTopic === "vykon") {
+      formulaSVG = `
+        <svg width="200" height="160" viewBox="0 0 200 160">
+          <polygon points="100,10 10,150 190,150" fill="none" stroke="white" stroke-width="2"/>
+          <line x1="45" y1="100" x2="155" y2="100" stroke="white" stroke-width="2"/>
+          <text x="100" y="60" fill="white" font-size="32" text-anchor="middle">P</text>
+          <text x="65" y="135" fill="white" font-size="28" text-anchor="middle">W</text>
+          <text x="135" y="135" fill="white" font-size="28" text-anchor="middle">t</text>
+        </svg>`;
+    } else {
+      formulaSVG = `
+        <svg width="200" height="160" viewBox="0 0 200 160">
+          <polygon points="100,10 10,150 190,150" fill="none" stroke="white" stroke-width="2"/>
+          <line x1="45" y1="100" x2="155" y1="100" stroke="white" stroke-width="2"/>
+          <text x="100" y="60" fill="white" font-size="32" text-anchor="middle">W</text>
+          <text x="65" y="135" fill="white" font-size="28" text-anchor="middle">F</text>
+          <text x="135" y="135" fill="white" font-size="28" text-anchor="middle">s</text>
+        </svg>`;
+    }
+    c.innerHTML = formulaSVG;
+  }
+
+  // ---------- SVG OBRÁZEK ----------
+  function renderDiagram() {
+    const c = document.getElementById("diagram-svg-container");
+    if (!currentProblem) {
+      c.innerHTML = `<p class="text-gray-400 text-sm">Nejdříve spusťte příklad.</p>`;
+      return;
+    }
+
+    const F_value = currentProblem.givens.find(g => g.symbol === "F")?.value || "?";
+    const F_unit  = currentProblem.givens.find(g => g.symbol === "F")?.unit || "";
+    const s_value = currentProblem.givens.find(g => g.symbol === "s")?.value || "?";
+    const s_unit  = currentProblem.givens.find(g => g.symbol === "s")?.unit || "";
+
+    c.innerHTML = `
+      <svg width="320" height="180" viewBox="0 0 320 180">
+        <rect x="20" y="150" width="280" height="8" fill="#777"/>
+        <rect x="80" y="110" width="80" height="40" fill="#00AEEF" stroke="white" stroke-width="2"/>
+        <circle cx="95" cy="150" r="9" fill="#333"/>
+        <circle cx="145" cy="150" r="9" fill="#333"/>
+
+        <line x1="160" y1="130" x2="240" y1="130" stroke="red" stroke-width="3" marker-end="url(#arrowhead)"/>
+        <text x="200" y="120" fill="red" font-size="16" text

@@ -1,7 +1,9 @@
 console.log("Načítání app.js ...");
 
-// Obalíme vše do DOMContentLoaded, aby se spouštělo až po načtení
-document.addEventListener("DOMContentLoaded", () => {
+// Hlavní inicializační blok
+window.addEventListener("DOMContentLoaded", () => {
+  console.log("✅ DOM načten, inicializace aplikace...");
+{
   console.log("✅ DOM načten, inicializace aplikace...");
 
   const startButton = document.getElementById("start-button");

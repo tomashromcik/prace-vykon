@@ -88,32 +88,59 @@ document.addEventListener("DOMContentLoaded", () => {
 function attachPracticeListeners() {
   console.log("🧩 Aktivace tlačítek v režimu příkladů...");
 
-  const ids = [
-    "new-problem-button",
-    "check-calculation-button",
-    "open-calculator-button",
-    "open-formula-button",
-    "open-diagram-button",
-    "open-help-button",
-    "add-zapis-row-button",
-    "check-zapis-button",
-    "check-mass-calculation-button",
-    "check-force-calculation-button",
-    "check-work-calculation-button",
-    "next-button"
-  ];
+  const container = document.getElementById("practice-screen");
+  if (!container) {
+    console.error("❌ practice-screen nenalezen!");
+    return;
+  }
 
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener("click", () => {
-        console.log(`🟢 Klik: ${id}`);
-      });
-    } else {
-      console.warn(`⚠️ Nenalezen prvek s ID: ${id}`);
+  // Delegace událostí: nasloucháme klikům v celé sekci
+  container.addEventListener("click", (e) => {
+    const target = e.target.closest("button");
+    if (!target) return;
+
+    const id = target.id || "(bez ID)";
+    console.log(`🟢 Klik: ${id}`);
+
+    switch (id) {
+      case "new-problem-button":
+        console.log("🔁 Nový příklad (delegace)");
+        generateNewProblem();
+        break;
+
+      case "check-calculation-button":
+      case "check-zapis-button":
+      case "check-mass-calculation-button":
+      case "check-force-calculation-button":
+      case "check-work-calculation-button":
+        console.log(`🧮 Ověřit výpočet: ${id}`);
+        // Tady později přidáme reálnou kontrolu výsledku
+        break;
+
+      case "open-calculator-button":
+      case "open-formula-button":
+      case "open-diagram-button":
+      case "open-help-button":
+        console.log(`📘 Otevřít modál: ${id}`);
+        // Tady později zobrazíme příslušné modální okno
+        break;
+
+      case "add-zapis-row-button":
+        console.log("➕ Přidat novou veličinu do zápisu");
+        break;
+
+      case "next-button":
+        console.log("➡️ Další příklad");
+        generateNewProblem();
+        break;
+
+      default:
+        // Ostatní kliky ignorujeme
+        break;
     }
   });
 }
+
 
 
   // ====================================================================

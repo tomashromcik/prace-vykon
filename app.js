@@ -1,5 +1,5 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (kompletní verze s checkboxem a kontrolou)
+//  app.js — Fyzika: Práce a výkon (opraveno: nový příklad + zpětná vazba)
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
   startButton?.addEventListener("click",()=>{
     setupScreen.classList.add("hidden");
     practiceScreen.classList.remove("hidden");
-    clearZapis();
+    resetToZapis();
     generateProblem();
   });
 
@@ -98,10 +98,19 @@ document.addEventListener("DOMContentLoaded", () => {
     renderSummary(summary);
     renderIssues(errors,warnings);
     if(errors.length===0){
+      feedback("✅ Zápis v pořádku! Pokračuj na výpočet.",true);
       document.getElementById("zapis-step")?.classList.add("hidden");
       document.getElementById("vypocet-step")?.classList.remove("hidden");
       renderReview(summary);
+    } else {
+      feedback("❌ Zápis obsahuje chyby – oprav je, než budeš pokračovat.",false);
     }
+  });
+
+  // ---------- Nový příklad ----------
+  document.getElementById("new-problem-button")?.addEventListener("click",()=>{
+    generateProblem();
+    resetToZapis();
   });
 
   // ---------- Databáze příkladů ----------
@@ -135,9 +144,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const ex=d.examples[Math.floor(Math.random()*d.examples.length)];
     currentProblem=ex;
     document.getElementById("problem-text").textContent=ex.text;
+    console.log("🆕 Nový příklad:",ex.text);
   }
 
-  // ---------- Kontrola zápisu ----------
+  // ---------- Validace zápisu ----------
   const unitSets={
     length:["mm","cm","m","km"],energy:["J","kJ","MJ"],
     force:["N","kN","MN"],power:["W","kW","MW"],
@@ -173,30 +183,30 @@ document.addEventListener("DOMContentLoaded", () => {
   function validateZapis(){
     const z=collect(),errors=[],warn=[];
     const sum=z.map((r,i)=>`${i+1}. ${r.symbol} = ${r.unknown?"?":r.raw||""} ${r.unit}`).join("\n");
-    // 1) veličina↔jednotka
     z.forEach(r=>{
       const k=symbolToKind[r.symbol];
       if(k&&!unitSets[k].includes(r.unit))
-        errors.push(`Veličina **${r.symbol}** neodpovídá jednotce **${r.unit}**.`);
+        errors.push(`Veličina ${r.symbol} neodpovídá jednotce ${r.unit}.`);
     });
-    // 2–4) kontrola proti zadání
     const g=currentProblem?.givens||[];
     g.forEach(gv=>{
       const k=symbolToKind[gv.symbol];
       const r=z.find(x=>x.symbol==gv.symbol&&!x.unknown);
       if(!r)return;
-      if(r.raw=="?"||r.value==null){errors.push(`V řádku **${gv.symbol}** chybí hodnota.`);return;}
+      if(r.raw=="?"||r.value==null){errors.push(`U ${gv.symbol} chybí hodnota.`);return;}
       const bg=toBase(gv.value,gv.unit,k),br=toBase(r.value,r.unit,k);
       if(bg==null||br==null)return;
       if(nearly(bg,br)){
         const base=baseUnit[k];
         if(gv.unit!==base&&r.unit===gv.unit)
-          warn.push(`**${gv.symbol}** je v ${r.unit} – převeďte na ${base}.`);
-      }else errors.push(`**${gv.symbol}** neodpovídá zadání.`);
+          warn.push(`${gv.symbol} je v ${r.unit} – převeď na ${base}.`);
+      }else errors.push(`${gv.symbol} neodpovídá zadání.`);
     });
+    if(z.length===0)errors.push("Zápis je prázdný – přidej alespoň jednu veličinu.");
     return{errors,warnings:warn,summary:sum};
   }
 
+  // ---------- UI pomocné ----------
   function renderSummary(t){
     const fb=document.getElementById("zapis-feedback-container");
     fb.innerHTML=`<div class="p-3 bg-gray-900 border border-gray-700 rounded mb-3">
@@ -223,6 +233,16 @@ document.addEventListener("DOMContentLoaded", () => {
     ["zapis-container","zapis-feedback-container","zapis-review-container"].forEach(id=>{
       const e=document.getElementById(id);if(e)e.innerHTML="";
     });
+  }
+  function resetToZapis(){
+    document.getElementById("zapis-step")?.classList.remove("hidden");
+    document.getElementById("vypocet-step")?.classList.add("hidden");
+    document.getElementById("result-step")?.classList.add("hidden");
+    clearZapis();
+  }
+  function feedback(msg,ok){
+    const fb=document.getElementById("zapis-feedback-container");
+    fb.insertAdjacentHTML("beforeend",`<div class="${ok?"feedback-correct":"feedback-wrong"} mt-2">${msg}</div>`);
   }
 
   console.log("✅ Logika aplikace úspěšně načtena.");

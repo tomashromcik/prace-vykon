@@ -1,50 +1,37 @@
-// ====================================================================
-//  app.js — logika aplikace "Práce a výkon"
-// ====================================================================
-
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("Aplikace inicializována ✅");
-
-  // --- ZÁKLADNÍ ELEMENTY ---
-  const setupScreen = document.getElementById("setup-screen");
-  const practiceScreen = document.getElementById("practice-screen");
-  const startButton = document.getElementById("start-button");
-  const topicSelect = document.getElementById("topic-select");
-
-  const modeButtons = document.querySelectorAll(".mode-btn");
-  const levelButtons = document.querySelectorAll("#level-easy, #level-normal, #level-hard");
-  const startTutorialButton = document.getElementById("start-tutorial-button");
-
-  const newProblemButton = document.getElementById("new-problem-button");
-  const backButton = document.getElementById("back-button");
-
-  // --- STAVY ---
-  let selectedMode = null;
-  let selectedLevel = null;
-  let selectedTopic = "prace";
-  let currentProblem = null;
-
   // --- REŽIM A OBTÍŽNOST ---
+  const modeButtons = document.querySelectorAll('[id^="mode-"]');
+  const levelButtons = document.querySelectorAll('[id^="level-"]');
+
+  if (modeButtons.length === 0) console.warn("⚠️ Nebyla nalezena žádná tlačítka režimu.");
+  if (levelButtons.length === 0) console.warn("⚠️ Nebyla nalezena žádná tlačítka úrovně.");
+
   modeButtons.forEach(btn => {
     btn.addEventListener("click", () => {
+      console.log(`Režim zvolen: ${btn.id}`);
       modeButtons.forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
       btn.classList.add("ring-2", "ring-blue-500");
       selectedMode = btn.id.includes("practice") ? "practice" : "test";
       updateStartButtonState();
     });
   });
+
   levelButtons.forEach(btn => {
     btn.addEventListener("click", () => {
+      console.log(`Obtížnost zvolena: ${btn.id}`);
       levelButtons.forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
       btn.classList.add("ring-2", "ring-blue-500");
-      if (btn.id === "level-easy") selectedLevel = "easy";
-      if (btn.id === "level-normal") selectedLevel = "normal";
-      if (btn.id === "level-hard") selectedLevel = "hard";
+
+      if (btn.id.includes("easy")) selectedLevel = "easy";
+      if (btn.id.includes("normal")) selectedLevel = "normal";
+      if (btn.id.includes("hard")) selectedLevel = "hard";
+
       updateStartButtonState();
     });
   });
-  topicSelect.addEventListener("change", e => {
+
+  topicSelect?.addEventListener("change", e => {
     selectedTopic = e.target.value;
+    console.log("Téma:", selectedTopic);
     updateStartButtonState();
   });
 
@@ -52,22 +39,33 @@ document.addEventListener("DOMContentLoaded", () => {
     if (selectedMode && selectedLevel && selectedTopic) {
       startButton.disabled = false;
       startButton.classList.remove("btn-disabled");
+      console.log("✅ Start povolen");
+    } else {
+      startButton.disabled = true;
+      startButton.classList.add("btn-disabled");
     }
   }
 
-  // --- START APLIKACE ---
-  startButton.addEventListener("click", () => {
-    setupScreen.classList.add("hidden");
-    practiceScreen.classList.remove("hidden");
-    generateNewProblem();
-  });
+  // --- START / ZPĚT / NOVÝ ---
+  if (startButton) {
+    startButton.addEventListener("click", () => {
+      console.log("▶️ Spuštěno");
+      setupScreen.classList.add("hidden");
+      practiceScreen.classList.remove("hidden");
+      generateNewProblem();
+    });
+  } else {
+    console.warn("⚠️ Nenalezen startButton");
+  }
 
-  backButton.addEventListener("click", () => {
+  backButton?.addEventListener("click", () => {
+    console.log("⬅️ Zpět na úvod");
     setupScreen.classList.remove("hidden");
     practiceScreen.classList.add("hidden");
   });
 
-  newProblemButton.addEventListener("click", generateNewProblem);
+  newProblemButton?.addEventListener("click", generateNewProblem);
+
 
   // ====================================================================
   //  GENERÁTOR PŘÍKLADŮ

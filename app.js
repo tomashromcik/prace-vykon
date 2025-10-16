@@ -1,6 +1,7 @@
 // ====================================================================
 //  app.js — Fyzika: Práce a výkon
-//  2025-10-18 • jen dvě nové úlohy pro "Normální" (kN / km) + fix "Zpět"
+//  2025-10-18 • kontrola zápisu -> výpočet, sloučené převody v přepisu,
+//                 kontrola "Hledaná veličina", úlohy kN/km pro „Normal“
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -11,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- Stav ----------
   let selectedMode = null;     // "practice" | "test"
   let selectedLevel = null;    // "easy" | "normal" | "hard"
-  let selectedTopic = "prace"; // nepotřebujeme striktně, ale zachováváme
+  let selectedTopic = "prace"; // necháváme pro kompatibilitu
   let currentProblem = null;
 
   // ---------- DOM ----------
@@ -82,10 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- Zpět na výběr ----------
   backButton?.addEventListener("click", () => {
     console.log("↩️ Zpět na výběr");
-    // skryj hlavní app a ukaž setup
     practiceScreen.classList.add("hidden");
     setupScreen.classList.remove("hidden");
-    // vyčisti stav části practice (ale ponecháme volby režimu/obtížnosti)
     clearPractice();
   });
 
@@ -93,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
   newProblemButton?.addEventListener("click", () => {
     console.log("🆕 Klik: Nový příklad");
     generateProblem();
-    resetToZapis(true); // přepne na krok Zápis, smaže předchozí, přidá 1. řádek
+    resetToZapis(true);
   });
 
   // ---------- Přidat řádek ----------
@@ -102,19 +101,36 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- Kontrola zápisu ----------
   checkZapisBtn?.addEventListener("click", () => {
     console.log("🧪 Klik: Zkontrolovat zápis");
-    const { errors, warnings, summary, conversions } = validateZapis();
-    renderSummary(summary);
-    renderIssues(errors, warnings);
 
-    // automaticky doplň převodové řádky (pokud ještě nejsou)
-    if (conversions.length > 0) {
-      const existing = collect().map(r => `${r.symbol}:${r.unit}`).join("|");
-      conversions.forEach(c => {
+    const rows = collect();
+    const check = validateZapisFull(rows); // plná kontrola pro tlačítko
+    renderSummary(mergedSummary(rows));     // sloučené převody na jeden řádek
+    renderIssues(check.errors, check.warnings);
+
+    // nabídni/doplň převody (base řádky), pokud chybí
+    if (check.conversions.length > 0) {
+      const existing = rows.map(r => `${r.symbol}:${r.unit}`).join("|");
+      check.conversions.forEach(c => {
         const key = `${c.symbol}:${c.base}`;
         if (!existing.includes(key)) addZapisRow(c.symbol, "", c.base, true);
       });
     }
-    // Nepřepínáme do výpočtu — teď je prioritou funkčnost zpětné vazby.
+
+    // pokud vše OK -> přejdi na Výpočet
+    if (check.errors.length === 0) {
+      console.log("✅ Zápis OK — přechod na Výpočet");
+      zapisStep?.classList.add("hidden");
+      vypocetStep?.classList.remove("hidden");
+      // zobraz přepis i ve „review“
+      if (zapisReview) {
+        zapisReview.innerHTML = `
+          <div class="p-3 bg-gray-900 border border-gray-700 rounded">
+            <div class="font-semibold mb-2 text-gray-300">Souhrn zápisu:</div>
+            <pre class="text-gray-200 text-sm whitespace-pre-wrap">${mergedSummary(rows)}</pre>
+          </div>
+        `;
+      }
+    }
   });
 
   // ====================================================================
@@ -129,7 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let text, givens, result;
 
     if (selectedLevel === "normal") {
-      // Dvě varianty:
       const variant = randInt(1, 2);
 
       if (variant === 1) {
@@ -144,17 +159,17 @@ document.addEventListener("DOMContentLoaded", () => {
         result = (FkN * 1000) * s_m;    // W = F*s (N*m)
       } else {
         // 2) s = x km, F = x N
-        const s_km = randInt(1, 5);     // 1–5 km
+        const s_km = randInt(1, 5);       // 1–5 km
         const F_N  = randInt(1000, 5000); // 1000–5000 N
         text = `Auto jelo rovnoměrným přímočarým pohybem po dráze ${s_km} km. Tahová síla motoru byla ${F_N} N.`;
         givens = [
           { symbol: "s", value: s_km, unit: "km" },
           { symbol: "F", value: F_N, unit: "N" }
         ];
-        result = (s_km * 1000) * F_N;   // W = F*s (N*m)
+        result = (s_km * 1000) * F_N;     // W = F*s (N*m)
       }
     } else {
-      // fallback pro easy/hard – také jen kN/km, aby se nevracely staré příklady
+      // fallback pro easy/hard — udržím kN/km, aby se nevracely staré úlohy
       const FkN = randInt(1, 3);
       const s_km = randInt(1, 2);
       text = `Zjednodušené: Síla ${FkN} kN a dráha ${s_km} km. Určete práci.`;
@@ -171,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ====================================================================
-  //  ZÁPIS — přidávání řádků + živá validace + hint na převod
+  //  ZÁPIS — přidávání řádků + živá validace + hinty na převod
   // ====================================================================
 
   function addZapisRow(symbol = "-", value = "", unit = "-", baseHint = false) {
@@ -180,7 +195,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const symBase = ["-","F","s","W"];
     const unitBase = ["-","mm","cm","m","km","J","kJ","MJ","N","kN","MN","W","kW","MW","g","kg","t","s","min","h"];
 
-    // v normal/hard necháme širší sadu
     const sy = (selectedLevel === "normal" || selectedLevel === "hard") ? ["-","F","s","W","P","t","m"] : symBase;
     const un = (selectedLevel === "normal" || selectedLevel === "hard") ? unitBase : ["-","cm","m","km","J","kJ","MJ","N","kN","MN"];
 
@@ -231,11 +245,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function liveValidate() {
-    const { errors, warnings, conversions } = validateZapis();
+    const rows = collect();
+    const { errors, warnings, conversions } = validateZapisLive(rows);
     renderLiveIssues(errors, warnings);
 
     if (conversions.length > 0) {
-      const existing = collect().map(r => `${r.symbol}:${r.unit}`).join("|");
+      const existing = rows.map(r => `${r.symbol}:${r.unit}`).join("|");
       conversions.forEach(c => {
         const key = `${c.symbol}:${c.base}`;
         if (!existing.includes(key)) addZapisRow(c.symbol, "", c.base, true);
@@ -244,7 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ====================================================================
-  //  VALIDACE
+  //  VALIDACE A PŘEVODY
   // ====================================================================
 
   const unitSets = {
@@ -268,8 +283,10 @@ document.addEventListener("DOMContentLoaded", () => {
       case "mass":   if (u==="g")  return v/1000; if (u==="t")  return v*1000; return v;
       case "time":   if (u==="min")return v*60;   if (u==="h")  return v*3600; return v;
     }
-    return null;
+    return v;
   }
+
+  const nearly = (a,b) => Math.abs(a-b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
 
   function collect() {
     return [...document.querySelectorAll("#zapis-container .zapis-row")].map(r => {
@@ -282,13 +299,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function validateZapis() {
-    const rows = collect();
+  // ŽIVÁ kontrola – mírnější (nevyžaduje hned, aby base řádek měl hodnotu)
+  function validateZapisLive(rows) {
     const errors = [];
     const warnings = [];
     const conversions = [];
-
-    const summary = rows.map((r,i)=>`${i+1}. ${r.symbol} = ${r.unknown?"?":(r.raw||"")} ${r.unit}`).join("\n");
 
     // 1) Veličina × jednotka
     rows.forEach(r => {
@@ -299,7 +314,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // 2) Upozorni na převod na základní jednotku + nabídni doplnění řádku
+    // 2) Upozorni na převod (nabídnout base řádek)
     rows.forEach(r => {
       const kind = symbolToKind[r.symbol];
       if (!kind) return;
@@ -310,12 +325,131 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    return { errors, warnings, summary, conversions };
+    // 3) alespoň jedna hledaná veličina – pouze varování v live
+    const hasUnknown = rows.some(r => r.unknown);
+    if (!hasUnknown) warnings.push("Označ 'Hledanou veličinu' (alespoň jednu).");
+
+    return { errors, warnings, conversions };
+  }
+
+  // TLAČÍTKOVÁ kontrola – přísnější (vyžaduje skutečný převod + hodnoty)
+  function validateZapisFull(rows) {
+    const errors = [];
+    const warnings = [];
+    const conversions = [];
+
+    if (rows.length === 0) {
+      errors.push("Zápis je prázdný – přidej alespoň jednu veličinu.");
+      return { errors, warnings, conversions };
+    }
+
+    // 1) Veličina × jednotka
+    rows.forEach(r => {
+      const kind = symbolToKind[r.symbol];
+      if (!kind) return;
+      if (!unitSets[kind].includes(r.unit)) {
+        errors.push(`Veličina ${r.symbol} neodpovídá jednotce ${r.unit}.`);
+      }
+    });
+
+    // 2) alespoň jedna hledaná veličina
+    const hasUnknown = rows.some(r => r.unknown);
+    if (!hasUnknown) {
+      errors.push("Označ 'Hledanou veličinu' (alespoň jednu).");
+    }
+
+    // 3) Povinný převod do základní jednotky (pokud student použil odvozenou)
+    //    -> musí existovat i řádek se stejným symbolem v base jednotce + správná hodnota
+    const grouped = groupBy(rows, r => r.symbol);
+    Object.entries(grouped).forEach(([symbol, arr]) => {
+      const kind = symbolToKind[symbol];
+      if (!kind) return;
+      const base = baseUnit[kind];
+
+      // má-li student řádek v jiné než základní jednotce, vynucujeme převod
+      const nonBase = arr.filter(r => r.unit !== "-" && r.unit !== base);
+      if (nonBase.length > 0) {
+        const baseRows = arr.filter(r => r.unit === base);
+        if (baseRows.length === 0) {
+          errors.push(`Doplň převod pro ${symbol} na základní jednotku (${base}).`);
+          conversions.push({ symbol, base });
+        } else {
+          // zkontroluj hodnoty (pokud jsou vyplněny)
+          const nb = nonBase[0];
+          const br = baseRows[0];
+          if (nb.value != null && br.value != null) {
+            const conv = toBase(nb.value, nb.unit, kind); // očekávaná base hodnota
+            if (conv == null || !nearly(conv, br.value)) {
+              const exp = (conv != null) ? `${pretty(conv)} ${base}` : `správný převod`;
+              errors.push(`Převod ${symbol} není správně. Očekává se ${exp}.`);
+            }
+          } else {
+            warnings.push(`Doplň hodnotu převodu pro ${symbol} v ${base}.`);
+          }
+        }
+      }
+    });
+
+    return { errors, warnings, conversions };
+  }
+
+  function groupBy(arr, keyFn) {
+    return arr.reduce((acc, x) => {
+      const k = keyFn(x);
+      (acc[k] ||= []).push(x);
+      return acc;
+    }, {});
+  }
+
+  function pretty(x) {
+    // zobraz pěkně celá čísla bez .0
+    return (Math.abs(x - Math.round(x)) < 1e-9) ? String(Math.round(x)) : String(x);
   }
 
   // ====================================================================
-  //  RENDER FEEDBACK
+  //  VÝSTUPY / FEEDBACK
   // ====================================================================
+
+  // Sloučený přepis: F=2 kN a F=2000 N -> "F = 2 kN = 2000 N"
+  function mergedSummary(rows) {
+    const grouped = groupBy(rows, r => r.symbol);
+    const lines = [];
+
+    Object.entries(grouped).forEach(([symbol, arr]) => {
+      const kind = symbolToKind[symbol];
+      if (!kind) {
+        // symbol "-" apod.
+        arr.forEach(r => lines.push(`${symbol} = ${r.unknown ? "?" : (r.raw || "")} ${r.unit}`.trim()));
+        return;
+      }
+      const base = baseUnit[kind];
+      const nonBase = arr.filter(r => r.unit !== "-" && r.unit !== base);
+      const baseRows = arr.filter(r => r.unit === base);
+
+      if (nonBase.length > 0 || baseRows.length > 0) {
+        // poskládej řetězce ve tvaru val unit
+        const parts = [];
+        // pro stabilitu řadíme: nejprve všechny non-base (podle "síly" jednotky neurčujeme, jen pořadí zadání),
+        // nakonec base
+        nonBase.forEach(r => parts.push(`${r.unknown ? "?" : (r.raw || "")} ${r.unit}`.trim()));
+        baseRows.forEach(r => parts.push(`${r.unknown ? "?" : (r.raw || "")} ${r.unit}`.trim()));
+
+        // Odstraň prázdné části
+        const clean = parts.filter(p => p && p !== "? " && p !== "?");
+        if (clean.length > 0) {
+          lines.push(`${symbol} = ${clean.join(" = ")}`.trim());
+        } else {
+          // fallback
+          arr.forEach(r => lines.push(`${symbol} = ${r.unknown ? "?" : (r.raw || "")} ${r.unit}`.trim()));
+        }
+      } else {
+        // žádné jednotky -> vypsat vše, co je
+        arr.forEach(r => lines.push(`${symbol} = ${r.unknown ? "?" : (r.raw || "")} ${r.unit}`.trim()));
+      }
+    });
+
+    return lines.join("\n");
+  }
 
   function renderSummary(text) {
     if (!zapisFeedback) return;
@@ -339,13 +473,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!errors.length && !warnings.length) {
       parts.push(`<div class="feedback-correct">✅ Zápis je v pořádku.</div>`);
     }
-    // Nepřepisujeme souhrn – issues zobrazíme POD souhrnem:
+    // issues zobraz POD souhrnem:
     zapisFeedback.insertAdjacentHTML("beforeend", parts.join("\n"));
   }
 
   function renderLiveIssues(errors, warnings) {
     if (!zapisFeedback) return;
-    // Živá validace přepisuje celý blok (souhrn živě netiskneme)
     const parts = [];
     if (errors.length) {
       parts.push(`<div class="feedback-wrong"><b>Chyby:</b><ul>${errors.map(e=>`<li>${e}</li>`).join("")}</ul></div>`);

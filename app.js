@@ -353,6 +353,50 @@ document.addEventListener("DOMContentLoaded", () => {
       c.innerHTML = "Nápověda je k dispozici pouze v režimu procvičování.";
     }
   }
+  // ---------- MODÁLY ----------
+  function toggleModal(id, show) {
+    const modal = document.getElementById(id);
+    if (!modal) {
+      console.warn(`⚠️ Modal '${id}' nebyl nalezen.`);
+      return;
+    }
+    modal.classList.toggle("hidden", !show);
+  }
+
+  // Bezpečně přiřadíme kliky, až když tlačítka existují
+  const btnMap = {
+    "open-calculator-button": "calculator-modal",
+    "open-formula-button": "formula-modal",
+    "open-diagram-button": "diagram-modal",
+    "open-help-button": "help-modal"
+  };
+
+  Object.entries(btnMap).forEach(([btnId, modalId]) => {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.addEventListener("click", () => {
+        console.log(`🧩 Klik: ${btnId}`);
+        if (btnId === "open-formula-button") renderFormulaTriangle();
+        if (btnId === "open-diagram-button") renderDiagram();
+        if (btnId === "open-help-button") renderHelp();
+        toggleModal(modalId, true);
+      });
+    } else {
+      console.warn(`⚠️ Tlačítko '${btnId}' nebylo nalezeno.`);
+    }
+  });
+
+  // Zavírání modálů
+  ["calculator", "formula", "diagram", "help"].forEach(name => {
+    const modal = document.getElementById(`${name}-modal`);
+    const closeBtn = document.getElementById(`close-${name}-button`);
+    if (modal && closeBtn) {
+      closeBtn.addEventListener("click", () => toggleModal(`${name}-modal`, false));
+      modal.addEventListener("click", e => {
+        if (e.target === modal) toggleModal(`${name}-modal`, false);
+      });
+    }
+  });
 
   console.log("✅ Logika aplikace úspěšně načtena.");
 });

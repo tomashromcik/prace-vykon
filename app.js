@@ -312,6 +312,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  attachLiveValidation();
+ // attachLiveValidation();
   console.log("✅ Logika aplikace úspěšně načtena.");
 });

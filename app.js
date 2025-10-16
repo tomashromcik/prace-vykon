@@ -102,6 +102,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     row.append(sSel, val, uSel, lab);
     c.appendChild(row);
+    // Aktivace validace pro nové prvky
+[sSel, val, uSel, cb].forEach(el => {
+  el.addEventListener("input", () => {
+    const { errors, warnings } = validateZapis();
+    renderLiveIssues(errors, warnings);
+  });
+  el.addEventListener("change", () => {
+    const { errors, warnings } = validateZapis();
+    renderLiveIssues(errors, warnings);
+  });
+});
+
   });
 
   // ---------- Nový příklad ----------

@@ -1,10 +1,33 @@
-  // --- REŽIM A OBTÍŽNOST ---
-
 console.log("Načítání app.js ...");
 
-window.addEventListener("load", () => {
-  console.log("🌐 Stránka kompletně načtena");
+// Obalíme vše do DOMContentLoaded, aby se spouštělo až po načtení
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("✅ DOM načten, inicializace aplikace...");
+
+  const startButton = document.getElementById("start-button");
+  const topicSelect = document.getElementById("topic-select");
+  const setupScreen = document.getElementById("setup-screen");
+  const practiceScreen = document.getElementById("practice-screen");
+
+  // Bezpečná kontrola, zda tlačítko existuje
+  if (!startButton) {
+    console.error("❌ Element start-button nebyl nalezen. Zkontroluj id v index.html!");
+    return;
+  }
+
+  // Příklad jednoduchého listeneru
+  startButton.addEventListener("click", () => {
+    console.log("▶️ Klik na tlačítko Spustit");
+    setupScreen?.classList.add("hidden");
+    practiceScreen?.classList.remove("hidden");
+  });
+
+  // Tady pokračuje zbytek tvého kódu…
 });
+
+
+// --- REŽIM A OBTÍŽNOST ---
+
 
   const modeButtons = document.querySelectorAll('[id^="mode-"]');
   const levelButtons = document.querySelectorAll('[id^="level-"]');

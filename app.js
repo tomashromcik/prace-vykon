@@ -102,42 +102,49 @@ function attachPracticeListeners() {
     const id = target.id || "(bez ID)";
     console.log(`🟢 Klik: ${id}`);
 
-    switch (id) {
-      case "new-problem-button":
-        console.log("🔁 Nový příklad (delegace)");
-        generateNewProblem();
-        break;
+   switch (id) {
+  // === Přepínání kroků ===
+  case "check-zapis-button":
+    console.log("➡️ Přechod na krok: výpočet");
+    document.getElementById("zapis-step")?.classList.add("hidden");
+    document.getElementById("vypocet-step")?.classList.remove("hidden");
+    break;
 
-      case "check-calculation-button":
-      case "check-zapis-button":
-      case "check-mass-calculation-button":
-      case "check-force-calculation-button":
-      case "check-work-calculation-button":
-        console.log(`🧮 Ověřit výpočet: ${id}`);
-        // Tady později přidáme reálnou kontrolu výsledku
-        break;
+  case "check-calculation-button":
+  case "check-work-calculation-button":
+  case "check-mass-calculation-button":
+  case "check-force-calculation-button":
+    console.log(`✅ Ověření výpočtu: ${id}`);
+    showFeedback(`Zatím testovací ověření pro ${id}`, true);
+    break;
 
-      case "open-calculator-button":
-      case "open-formula-button":
-      case "open-diagram-button":
-      case "open-help-button":
-        console.log(`📘 Otevřít modál: ${id}`);
-        // Tady později zobrazíme příslušné modální okno
-        break;
+  case "next-button":
+    console.log("🔁 Další příklad (reset kroků)");
+    document.getElementById("zapis-step")?.classList.remove("hidden");
+    document.getElementById("vypocet-step")?.classList.add("hidden");
+    document.getElementById("result-step")?.classList.add("hidden");
+    generateNewProblem();
+    break;
 
-      case "add-zapis-row-button":
-        console.log("➕ Přidat novou veličinu do zápisu");
-        break;
+  // === Modální okna ===
+  case "open-calculator-button":
+    toggleModal("calculator-modal", true);
+    break;
+  case "open-formula-button":
+    toggleModal("formula-modal", true);
+    break;
+  case "open-diagram-button":
+    toggleModal("diagram-modal", true);
+    break;
+  case "open-help-button":
+    alert("Tady bude nápověda 💡");
+    break;
 
-      case "next-button":
-        console.log("➡️ Další příklad");
-        generateNewProblem();
-        break;
+  // === Zavírání modálů ===
+  case "close-calculator-button":
+  case "close-formula-button":
+  case "c
 
-      default:
-        // Ostatní kliky ignorujeme
-        break;
-    }
   });
 }
 

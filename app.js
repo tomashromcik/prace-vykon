@@ -636,3 +636,205 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     return Object.entries(map).map(([s, vals]) => `${s} = ${vals.join(" = ")}`).join("\n");
   }
+
+    function renderSummary(text) {
+    zapisFeedback.innerHTML = `
+      <div class="p-3 bg-gray-900 border border-gray-700 rounded mb-3">
+        <div class="font-semibold mb-2 text-gray-300">Souhrn zápisu:</div>
+        <pre class="text-gray-200 text-sm whitespace-pre-wrap">${text}</pre>
+      </div>`;
+  }
+
+  function renderIssues(errors) {
+    const parts = [];
+    if (errors.length)
+      parts.push(`<div class="feedback-wrong"><b>Chyby:</b><ul>${errors.map(e=>`<li>${e}</li>`).join("")}</ul></div>`);
+    if (!errors.length)
+      parts.push(`<div class="feedback-correct">✅ Zápis je v pořádku.</div>`);
+    zapisFeedback.insertAdjacentHTML("beforeend", parts.join("\n"));
+  }
+
+  function resetToZapis(addFirstRow = false) {
+    zapisStep.classList.remove("hidden");
+    vypocetStep.classList.add("hidden");
+    zapisContainer.innerHTML = "";
+    zapisFeedback.innerHTML = "";
+    zapisReview.innerHTML = "";
+    if (addFirstRow) addZapisRow();
+  }
+
+  function clearPractice() {
+    resetToZapis(false);
+    currentProblem = null;
+    problemTextEl.textContent = "";
+  }
+
+  // ---------- MODÁLY ----------
+  function toggleModal(id, show) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    modal.classList.toggle("hidden", !show);
+  }
+
+  const btnMap = {
+    "open-calculator-button": "calculator-modal",
+    "open-formula-button": "formula-modal",
+    "open-diagram-button": "diagram-modal",
+    "open-help-button": "help-modal"
+  };
+
+  Object.entries(btnMap).forEach(([btnId, modalId]) => {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.addEventListener("click", () => {
+        console.log(`🧩 Klik: ${btnId}`);
+        if (btnId === "open-formula-button") renderFormulaTriangle();
+        if (btnId === "open-diagram-button") renderDiagram();
+        if (btnId === "open-help-button") renderHelp();
+        if (btnId === "open-calculator-button") renderCalculator();
+        toggleModal(modalId, true);
+      });
+    }
+  });
+
+  ["calculator", "formula", "diagram", "help"].forEach(name => {
+    const modal = document.getElementById(`${name}-modal`);
+    const closeBtn = document.getElementById(`close-${name}-button`);
+    if (modal && closeBtn) {
+      closeBtn.addEventListener("click", () => toggleModal(`${name}-modal`, false));
+      modal.addEventListener("click", e => {
+        if (e.target === modal) toggleModal(`${name}-modal`, false);
+      });
+    }
+  });
+
+  // ---------- SVG VZOREC ----------
+  function renderFormulaTriangle() {
+    const c = document.getElementById("formula-svg-container");
+    let formulaSVG = "";
+    if (selectedTopic === "vykon") {
+      formulaSVG = `
+        <svg width="200" height="160" viewBox="0 0 200 160">
+          <polygon points="100,10 10,150 190,150" fill="none" stroke="white" stroke-width="2"/>
+          <line x1="45" y1="100" x2="155" y1="100" stroke="white" stroke-width="2"/>
+          <text x="100" y="60" fill="white" font-size="32" text-anchor="middle">P</text>
+          <text x="65" y="135" fill="white" font-size="28" text-anchor="middle">W</text>
+          <text x="135" y="135" fill="white" font-size="28" text-anchor="middle">t</text>
+        </svg>`;
+    } else {
+      formulaSVG = `
+        <svg width="200" height="160" viewBox="0 0 200 160">
+          <polygon points="100,10 10,150 190,150" fill="none" stroke="white" stroke-width="2"/>
+          <line x1="45" y1="100" x2="155" y1="100" stroke="white" stroke-width="2"/>
+          <text x="100" y="60" fill="white" font-size="32" text-anchor="middle">W</text>
+          <text x="65" y="135" fill="white" font-size="28" text-anchor="middle">F</text>
+          <text x="135" y="135" fill="white" font-size="28" text-anchor="middle">s</text>
+        </svg>`;
+    }
+    c.innerHTML = formulaSVG;
+  }
+
+  // ---------- SVG OBRÁZEK ----------
+  function renderDiagram() {
+    const c = document.getElementById("diagram-svg-container");
+    if (!currentProblem) {
+      c.innerHTML = `<p class="text-gray-400 text-sm">Nejdříve spusťte příklad.</p>`;
+      return;
+    }
+
+    const F_value = currentProblem.givens.find(g => g.symbol === "F")?.value || "?";
+    const F_unit  = currentProblem.givens.find(g => g.symbol === "F")?.unit || "";
+    const s_value = currentProblem.givens.find(g => g.symbol === "s")?.value || "?";
+    const s_unit  = currentProblem.givens.find(g => g.symbol === "s")?.unit || "";
+
+    c.innerHTML = `
+      <svg width="320" height="180" viewBox="0 0 320 180">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="red"/>
+          </marker>
+          <marker id="arrowhead2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="orange"/>
+          </marker>
+        </defs>
+        <rect x="20" y="150" width="280" height="8" fill="#777"/>
+        <rect x="80" y="110" width="80" height="40" fill="#00AEEF" stroke="white" stroke-width="2"/>
+        <circle cx="95" cy="150" r="9" fill="#333"/>
+        <circle cx="145" cy="150" r="9" fill="#333"/>
+        <line x1="160" y1="130" x2="240" y2="130" stroke="red" stroke-width="3" marker-end="url(#arrowhead)"/>
+        <text x="200" y="120" fill="red" font-size="16" text-anchor="middle">F = ${F_value} ${F_unit}</text>
+        <line x1="80" y1="165" x2="240" y2="165" stroke="orange" stroke-width="2" marker-end="url(#arrowhead2)"/>
+        <text x="160" y="180" fill="orange" font-size="14" text-anchor="middle">s = ${s_value} ${s_unit}</text>
+      </svg>`;
+  }
+
+  // ---------- KALKULAČKA ----------
+  function renderCalculator() {
+    const displayMain = document.getElementById("calculator-display");
+    const historyEl = document.getElementById("calculator-history");
+    const btns = document.getElementById("calculator-buttons");
+
+    if (!displayMain || !historyEl || !btns) return;
+    btns.innerHTML = "";
+
+    const keys = [
+      "7","8","9","/","4","5","6","*",
+      "1","2","3","-","0",".","=","+","C","⌫","Copy"
+    ];
+    keys.forEach(k => {
+      const b = document.createElement("button");
+      b.textContent = k;
+      b.className = "bg-gray-700 text-white py-2 rounded hover:bg-gray-600";
+      btns.appendChild(b);
+    });
+
+    let current = "";
+    function updateDisplay() {
+      displayMain.textContent = current || "0";
+    }
+    updateDisplay();
+
+    btns.addEventListener("click", e => {
+      const t = e.target.textContent;
+      if (t === "C") { current = ""; historyEl.textContent = ""; }
+      else if (t === "⌫") { current = current.slice(0,-1); }
+      else if (t === "=") {
+        try {
+          const result = eval(current);
+          historyEl.textContent = `${current} =`;
+          current = String(result);
+        } catch { current = "Error"; }
+      } else if (t === "Copy") {
+        navigator.clipboard.writeText(displayMain.textContent);
+      } else current += t;
+      updateDisplay();
+    });
+
+    document.addEventListener("keydown", e => {
+      if (/[0-9\+\-\*\/\.]/.test(e.key)) { current += e.key; updateDisplay(); }
+      else if (e.key === "Enter") { try {
+          const result = eval(current);
+          historyEl.textContent = `${current} =`;
+          current = String(result);
+          updateDisplay();
+      } catch { current="Error"; updateDisplay(); } }
+      else if (e.key === "Backspace") { current=current.slice(0,-1); updateDisplay(); }
+    });
+  }
+
+  // ---------- NÁPOVĚDA ----------
+  function renderHelp() {
+    const c = document.getElementById("help-modal");
+    if (!c) return;
+    c.querySelector(".help-content").innerHTML = `
+      <div class="space-y-3 text-gray-300 text-sm">
+        <p>💡 <b>Tip:</b> Při řešení vždy vycházej z textu zadání.</p>
+        <p>1️⃣ Vyber známé veličiny a doplň jejich hodnoty i jednotky.</p>
+        <p>2️⃣ Označ <b>hledanou veličinu</b> pomocí checkboxu.</p>
+        <p>3️⃣ Pokud je hodnota v násobcích (např. kN, km), proveď převod na základní jednotku.</p>
+      </div>`;
+  }
+
+  console.log("✅ Logika aplikace úspěšně načtena.");
+});
+

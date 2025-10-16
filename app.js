@@ -1,5 +1,5 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (opraveno: nový příklad + zpětná vazba)
+//  app.js — Fyzika: Práce a výkon (verze 2025-10-16, stabilní + vizuální feedback)
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
   startButton?.addEventListener("click",()=>{
     setupScreen.classList.add("hidden");
     practiceScreen.classList.remove("hidden");
-    resetToZapis();
+    resetToZapis(true);
     generateProblem();
   });
 
@@ -69,15 +69,15 @@ document.addEventListener("DOMContentLoaded", () => {
       un=["-","mm","cm","m","km","J","kJ","MJ","N","kN","MN","W","kW","MW","g","kg","t","s","min","h"];
     }
     const row=document.createElement("div");
-    row.className="grid grid-cols-1 sm:grid-cols-4 gap-2 zapis-row mt-2 p-2 rounded-lg bg-gray-800 border border-gray-700";
+    row.className="grid grid-cols-1 sm:grid-cols-4 gap-2 zapis-row mt-2 p-2 rounded-lg bg-gray-800 border border-gray-700 transition-all duration-300";
     const sSel=document.createElement("select");
-    sSel.className="zapis-symbol p-2 rounded-md bg-gray-900 border border-gray-700 text-white";
+    sSel.className="zapis-symbol p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500";
     sy.forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;sSel.appendChild(o);});
     const val=document.createElement("input");
     val.type="text";val.placeholder="Hodnota";
-    val.className="zapis-value p-2 rounded-md bg-gray-900 border border-gray-700 text-white";
+    val.className="zapis-value p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500";
     const uSel=document.createElement("select");
-    uSel.className="zapis-unit p-2 rounded-md bg-gray-900 border border-gray-700 text-white";
+    uSel.className="zapis-unit p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500";
     un.forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;uSel.appendChild(o);});
     const lab=document.createElement("label");
     lab.className="flex items-center gap-2 text-sm text-gray-300";
@@ -90,6 +90,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     row.append(sSel,val,uSel,lab);
     c.appendChild(row);
+  });
+
+  // ---------- Nový příklad ----------
+  document.getElementById("new-problem-button")?.addEventListener("click",()=>{
+    generateProblem();
+    resetToZapis(true); // vytvoří prázdný řádek
   });
 
   // ---------- Kontrola zápisu ----------
@@ -105,12 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       feedback("❌ Zápis obsahuje chyby – oprav je, než budeš pokračovat.",false);
     }
-  });
-
-  // ---------- Nový příklad ----------
-  document.getElementById("new-problem-button")?.addEventListener("click",()=>{
-    generateProblem();
-    resetToZapis();
   });
 
   // ---------- Databáze příkladů ----------
@@ -229,20 +229,32 @@ document.addEventListener("DOMContentLoaded", () => {
       <pre class="text-gray-200 text-sm whitespace-pre-wrap">${t}</pre>
     </div>`;
   }
-  function clearZapis(){
-    ["zapis-container","zapis-feedback-container","zapis-review-container"].forEach(id=>{
-      const e=document.getElementById(id);if(e)e.innerHTML="";
-    });
-  }
-  function resetToZapis(){
+
+  function resetToZapis(addRow=false){
     document.getElementById("zapis-step")?.classList.remove("hidden");
     document.getElementById("vypocet-step")?.classList.add("hidden");
     document.getElementById("result-step")?.classList.add("hidden");
-    clearZapis();
+    const c=document.getElementById("zapis-container");
+    const fb=document.getElementById("zapis-feedback-container");
+    const rv=document.getElementById("zapis-review-container");
+    if(c)c.innerHTML="";
+    if(fb)fb.innerHTML="";
+    if(rv)rv.innerHTML="";
+    if(addRow){document.getElementById("add-zapis-row-button")?.click();}
   }
+
   function feedback(msg,ok){
     const fb=document.getElementById("zapis-feedback-container");
-    fb.insertAdjacentHTML("beforeend",`<div class="${ok?"feedback-correct":"feedback-wrong"} mt-2">${msg}</div>`);
+    if(!fb)return;
+    const el=document.createElement("div");
+    el.className=ok?"feedback-correct mt-2":"feedback-wrong mt-2";
+    el.textContent=msg;
+    fb.appendChild(el);
+    const step=document.getElementById("zapis-step");
+    if(step){
+      step.classList.add("ring-2",ok?"ring-green-500":"ring-red-500");
+      setTimeout(()=>step.classList.remove("ring-2","ring-green-500","ring-red-500"),600);
+    }
   }
 
   console.log("✅ Logika aplikace úspěšně načtena.");

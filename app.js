@@ -1,5 +1,5 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (řádky + checkbox + kontrola zápisu)
+//  app.js — Fyzika: Práce a výkon (kompletní verze s checkboxem a kontrolou)
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -7,508 +7,223 @@ console.log("Načítání app.js ...");
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ DOM načten, inicializace aplikace...");
 
-  // --- HLAVNÍ ELEMENTY ---
-  const setupScreen = document.getElementById("setup-screen");
-  const practiceScreen = document.getElementById("practice-screen");
-  const startButton = document.getElementById("start-button");
-  const topicSelect = document.getElementById("topic-select");
-  const startTutorialButton = document.getElementById("start-tutorial-button");
-
-  // --- STAVY ---
+  // ---------- Globální proměnné ----------
   let selectedMode = null;
   let selectedLevel = null;
   let selectedTopic = "prace";
   let currentProblem = null;
 
-  // --- REŽIM A OBTÍŽNOST ---
-  const modeButtons = document.querySelectorAll('[id^="mode-"]');
-  const levelButtons = document.querySelectorAll('[id^="level-"]');
+  const setupScreen = document.getElementById("setup-screen");
+  const practiceScreen = document.getElementById("practice-screen");
+  const startButton = document.getElementById("start-button");
+  const topicSelect = document.getElementById("topic-select");
 
-  modeButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      console.log(`🎓 Režim zvolen: ${btn.id}`);
-      modeButtons.forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
-      btn.classList.add("ring-2", "ring-blue-500");
-      selectedMode = btn.id.includes("practice") ? "practice" : "test";
-      updateStartButtonState();
+  // ---------- Volba režimu / obtížnosti ----------
+  document.querySelectorAll('[id^="mode-"]').forEach(b=>{
+    b.addEventListener("click",()=>{
+      document.querySelectorAll('[id^="mode-"]').forEach(x=>x.classList.remove("ring-2","ring-blue-500"));
+      b.classList.add("ring-2","ring-blue-500");
+      selectedMode = b.id.includes("practice")?"practice":"test";
+      updateStart();
     });
   });
-
-  levelButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      console.log(`🎯 Obtížnost zvolena: ${btn.id}`);
-      levelButtons.forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
-      btn.classList.add("ring-2", "ring-blue-500");
-      if (btn.id.includes("easy")) selectedLevel = "easy";
-      if (btn.id.includes("normal")) selectedLevel = "normal";
-      if (btn.id.includes("hard")) selectedLevel = "hard";
-      updateStartButtonState();
+  document.querySelectorAll('[id^="level-"]').forEach(b=>{
+    b.addEventListener("click",()=>{
+      document.querySelectorAll('[id^="level-"]').forEach(x=>x.classList.remove("ring-2","ring-blue-500"));
+      b.classList.add("ring-2","ring-blue-500");
+      if(b.id.includes("easy"))selectedLevel="easy";
+      if(b.id.includes("normal"))selectedLevel="normal";
+      if(b.id.includes("hard"))selectedLevel="hard";
+      updateStart();
     });
   });
-
-  topicSelect?.addEventListener("change", e => {
-    selectedTopic = e.target.value;
-    console.log("📘 Téma:", selectedTopic);
-    updateStartButtonState();
+  topicSelect?.addEventListener("change",e=>{
+    selectedTopic=e.target.value;
+    updateStart();
   });
 
-  function updateStartButtonState() {
-    const ok = selectedMode && selectedLevel && selectedTopic;
-    startButton.disabled = !ok;
-    startButton.classList.toggle("btn-disabled", !ok);
-    if (ok) console.log("✅ Start povolen");
+  function updateStart(){
+    const ok=selectedMode&&selectedLevel&&selectedTopic;
+    startButton.disabled=!ok;
+    startButton.classList.toggle("btn-disabled",!ok);
+    if(ok)console.log("✅ Start povolen");
   }
 
-  // --- START ---
-  startButton?.addEventListener("click", () => {
-    console.log("▶️ Kliknuto na Spustit");
-    setupScreen?.classList.add("hidden");
-    practiceScreen?.classList.remove("hidden");
+  // ---------- Spuštění ----------
+  startButton?.addEventListener("click",()=>{
+    setupScreen.classList.add("hidden");
+    practiceScreen.classList.remove("hidden");
     clearZapis();
-    generateNewProblem();
-    attachPracticeListeners();
+    generateProblem();
   });
 
-  // ====================================================================
-  //  INTERAKCE V REŽIMU PŘÍKLADŮ (delegace událostí)
-  // ====================================================================
-  function attachPracticeListeners() {
-    console.log("🧩 Aktivace tlačítek v režimu příkladů...");
-    const container = document.getElementById("practice-screen");
-    if (!container) return;
-
-    container.addEventListener("click", (e) => {
-      const target = e.target.closest("button");
-      if (!target) return;
-      const id = target.id || "(bez ID)";
-      console.log(`🟢 Klik: ${id}`);
-
-      switch (id) {
-        // =========== ZÁPIS ===========
-        case "add-zapis-row-button": {
-          const box = makeZapisRow();
-          document.getElementById("zapis-container")?.appendChild(box);
-          console.log("✅ Nový řádek zápisu přidán");
-          break;
-        }
-
-        case "check-zapis-button": {
-          console.log("🧪 Kontrola zápisu");
-          const { errors, warnings, summaryText } = validateZapis();
-          // souhrn zobraz v Zápisu (vždy)
-          renderSummaryInZapis(summaryText);
-          renderZapisIssues(errors, warnings);
-
-          if (errors.length === 0) {
-            console.log("✅ Zápis v pořádku — přechod na výpočet");
-            // navíc zkopíruj souhrn i do recenzního boxu u Výpočtu
-            renderSummaryInReview(summaryText);
-            document.getElementById("zapis-step")?.classList.add("hidden");
-            document.getElementById("vypocet-step")?.classList.remove("hidden");
-          } else {
-            console.log("❌ Zápis obsahuje chyby — zůstávám v kroku Zápis");
-          }
-          break;
-        }
-
-        // ========== VÝPOČET (zatím placeholder) ==========
-        case "check-calculation-button":
-        case "check-work-calculation-button":
-        case "check-mass-calculation-button":
-        case "check-force-calculation-button":
-          showMainFeedback("Zatím testovací ověření výpočtu.", true);
-          break;
-
-        // ========== MODÁLY ==========
-        case "open-calculator-button": toggleModal("calculator-modal", true); break;
-        case "open-formula-button":    toggleModal("formula-modal", true);    break;
-        case "open-diagram-button":    toggleModal("diagram-modal", true);    break;
-        case "close-calculator-button":
-        case "close-formula-button":
-        case "close-diagram-button":
-          toggleModal(target.closest(".fixed")?.id, false);
-          break;
-
-        // ========== DALŠÍ / NOVÝ ==========
-        case "new-problem-button":
-          clearZapis();
-          generateNewProblem();
-          break;
-
-        default: break;
-      }
+  // ---------- Přidávání řádku ----------
+  document.getElementById("add-zapis-row-button")?.addEventListener("click",()=>{
+    const c=document.getElementById("zapis-container");
+    if(!c)return;
+    const symEasy=["-","F","s","W"];
+    const unitEasy=["-","cm","m","km","J","kJ","MJ","N","kN","MN"];
+    let sy=symEasy,un=unitEasy;
+    if(selectedLevel==="hard"){
+      sy=["-","F","s","W","P","t","m"];
+      un=["-","mm","cm","m","km","J","kJ","MJ","N","kN","MN","W","kW","MW","g","kg","t","s","min","h"];
+    }
+    const row=document.createElement("div");
+    row.className="grid grid-cols-1 sm:grid-cols-4 gap-2 zapis-row mt-2 p-2 rounded-lg bg-gray-800 border border-gray-700";
+    const sSel=document.createElement("select");
+    sSel.className="zapis-symbol p-2 rounded-md bg-gray-900 border border-gray-700 text-white";
+    sy.forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;sSel.appendChild(o);});
+    const val=document.createElement("input");
+    val.type="text";val.placeholder="Hodnota";
+    val.className="zapis-value p-2 rounded-md bg-gray-900 border border-gray-700 text-white";
+    const uSel=document.createElement("select");
+    uSel.className="zapis-unit p-2 rounded-md bg-gray-900 border border-gray-700 text-white";
+    un.forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;uSel.appendChild(o);});
+    const lab=document.createElement("label");
+    lab.className="flex items-center gap-2 text-sm text-gray-300";
+    const cb=document.createElement("input");
+    cb.type="checkbox";cb.className="zapis-unknown h-4 w-4";
+    const sp=document.createElement("span");sp.textContent="Hledaná veličina";
+    lab.append(cb,sp);
+    cb.addEventListener("change",()=>{
+      if(cb.checked){val.value="?";val.disabled=true;}else{if(val.value=="?")val.value="";val.disabled=false;}
     });
-  }
+    row.append(sSel,val,uSel,lab);
+    c.appendChild(row);
+  });
 
-  // vytvoří DOM uzel jednoho řádku zápisu (select veličina, hodnota, jednotka, checkbox)
-  function makeZapisRow() {
-    // sady podle obtížnosti
-    const symEasy = ["-", "F", "s", "W"];
-    const unitEasy = ["-", "cm", "m", "km", "J", "kJ", "MJ", "N", "kN", "MN"];
-    let symbols = symEasy, units = unitEasy;
-    if (selectedLevel === "hard") {
-      symbols = ["-", "F", "s", "W", "P", "t", "m"];
-      units = ["-", "mm", "cm", "m", "km", "J", "kJ", "MJ", "N", "kN", "MN", "W", "kW", "MW", "g", "kg", "t", "s", "min", "h"];
+  // ---------- Kontrola zápisu ----------
+  document.getElementById("check-zapis-button")?.addEventListener("click",()=>{
+    const {errors,warnings,summary}=validateZapis();
+    renderSummary(summary);
+    renderIssues(errors,warnings);
+    if(errors.length===0){
+      document.getElementById("zapis-step")?.classList.add("hidden");
+      document.getElementById("vypocet-step")?.classList.remove("hidden");
+      renderReview(summary);
     }
+  });
 
-    const row = document.createElement("div");
-    row.className = "grid grid-cols-1 sm:grid-cols-4 gap-2 zapis-row mt-2 p-2 rounded-lg bg-gray-800 border border-gray-700";
-
-    row.innerHTML = `
-      <select class="zapis-symbol p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500">
-        ${symbols.map(v => `<option value="${v}">${v}</option>`).join("")}
-      </select>
-      <input type="text" placeholder="Hodnota" class="zapis-value p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500">
-      <select class="zapis-unit p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500">
-        ${units.map(u => `<option value="${u}">${u}</option>`).join("")}
-      </select>
-      <label class="flex items-center gap-2 text-sm text-gray-300">
-        <input type="checkbox" class="zapis-unknown h-4 w-4">
-        <span>Hledaná veličina</span>
-      </label>
-      <div class="col-span-1 sm:col-span-4 text-xs text-blue-300 italic hidden row-hint"></div>
-    `;
-
-    // logika checkboxu
-    const val = row.querySelector(".zapis-value");
-    const cb  = row.querySelector(".zapis-unknown");
-    cb.addEventListener("change", () => {
-      if (cb.checked) {
-        val.value = "?";
-        val.setAttribute("disabled", "disabled");
-      } else {
-        if (val.value === "?") val.value = "";
-        val.removeAttribute("disabled");
-      }
-    });
-
-    return row;
-    }
-
-  // ====================================================================
-  //  POMOCNÉ FUNKCE (UI)
-  // ====================================================================
-  function toggleModal(id, show) {
-    const modal = document.getElementById(id);
-    if (!modal) return;
-    modal.classList.toggle("hidden", !show);
-  }
-
-  function showMainFeedback(msg, isCorrect) {
-    const box = document.getElementById("vypocet-feedback-container");
-    if (!box) return;
-    box.innerHTML = `<div class="${isCorrect ? "feedback-correct" : "feedback-wrong"} mt-2">${msg}</div>`;
-  }
-
-  function renderSummaryInZapis(text) {
-    // ukázat souhrn v kroku Zápis (aby ho žák viděl hned)
-    const fb = document.getElementById("zapis-feedback-container");
-    if (!fb) return;
-    fb.innerHTML = `
-      <div class="p-3 rounded-lg bg-gray-900 border border-gray-700 mb-3">
-        <div class="text-sm text-gray-300 font-semibold mb-2">Souhrn zápisu:</div>
-        <pre class="text-gray-200 text-sm whitespace-pre-wrap">${text}</pre>
-      </div>
-    `;
-  }
-
-  function renderSummaryInReview(text) {
-    // kopie souhrnu do boxu nad výpočtem
-    const rev = document.getElementById("zapis-review-container");
-    if (!rev) return;
-    rev.innerHTML = `
-      <div class="p-3 rounded-lg bg-gray-900 border border-gray-700">
-        <div class="text-sm text-gray-300 font-semibold mb-2">Souhrn zápisu:</div>
-        <pre class="text-gray-200 text-sm whitespace-pre-wrap">${text}</pre>
-      </div>
-    `;
-  }
-
-  function renderZapisIssues(errors, warnings) {
-    const fb = document.getElementById("zapis-feedback-container");
-    if (!fb) return;
-    const parts = [];
-    if (errors.length) {
-      parts.push(`
-        <div class="feedback-wrong mb-2">
-          <div class="font-semibold mb-1">Chyby v zápisu:</div>
-          <ul class="list-disc pl-5">${errors.map(e => `<li>${e}</li>`).join("")}</ul>
-        </div>
-      `);
-    }
-    if (warnings.length) {
-      parts.push(`
-        <div class="feedback-correct">
-          <div class="font-semibold mb-1">Doporučení:</div>
-          <ul class="list-disc pl-5">${warnings.map(w => `<li>${w}</li>`).join("")}</ul>
-        </div>
-      `);
-    }
-    fb.insertAdjacentHTML("beforeend", parts.join("\n"));
-    fb.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-
-  function clearZapis() {
-    const z = document.getElementById("zapis-container");
-    const fb = document.getElementById("zapis-feedback-container");
-    const rev = document.getElementById("zapis-review-container");
-    if (z) z.innerHTML = "";
-    if (fb) fb.innerHTML = "";
-    if (rev) rev.innerHTML = "";
-  }
-
-  // ====================================================================
-  //  GENERÁTOR PŘÍKLADŮ + „givens“ (hodnoty ze zadání)
-  // ====================================================================
-  const problemText = document.getElementById("problem-text");
-  const unitSelect = document.getElementById("unit-select");
-  const feedbackContainer = document.getElementById("vypocet-feedback-container");
-
-  const topics = {
-    prace: {
-      units: ["J", "kJ"],
-      examples: [
-        {
-          text: "Auto působí silou 2 000 N na vzdálenost 5 m. Jakou práci vykoná?",
-          result: 2000 * 5,
-          givens: [
-            { symbol: "F", value: 2000, unit: "N" },
-            { symbol: "s", value: 5, unit: "m" },
-          ],
-        },
-        {
-          text: "Dělník zvedl břemeno o hmotnosti 50 kg do výšky 2 m. Vypočítej práci.",
-          result: 50 * 10 * 2,
-          givens: [
-            { symbol: "s", value: 2, unit: "m" },
-            // síla se zde odvozuje (m*g), pro zápis necháme na žákovi
-          ],
-        },
-      ],
+  // ---------- Databáze příkladů ----------
+  const topics={
+    prace:{
+      units:["J","kJ"],
+      examples:[
+        {text:"Auto působí silou 2 000 N na vzdálenost 5 m. Jakou práci vykoná?",
+         givens:[{symbol:"F",value:2000,unit:"N"},{symbol:"s",value:5,unit:"m"}],
+         result:2000*5},
+        {text:"Dělník zvedl břemeno 50 kg do výšky 2 m. Vypočítej práci.",
+         givens:[{symbol:"s",value:2,unit:"m"}],
+         result:50*10*2}
+      ]
     },
-    vykon: {
-      units: ["W", "kW"],
-      examples: [
-        {
-          text: "Motor vykonal práci 12 000 J za 4 s. Jaký byl výkon?",
-          result: 12000 / 4,
-          givens: [
-            { symbol: "W", value: 12000, unit: "J" },
-            { symbol: "t", value: 4, unit: "s" },
-          ],
-        },
-        {
-          text: "Čerpadlo vykonává práci 24 kJ za 8 s. Jaký je výkon?",
-          result: 24000 / 8,
-          givens: [
-            { symbol: "W", value: 24000, unit: "J" }, // 24 kJ převedeno
-            { symbol: "t", value: 8, unit: "s" },
-          ],
-        },
-      ],
-    },
-  };
-
-  function generateNewProblem() {
-    const data = topics[selectedTopic];
-    const example = data.examples[Math.floor(Math.random() * data.examples.length)];
-    currentProblem = example;
-    problemText.textContent = example.text;
-
-    unitSelect.innerHTML = "";
-    data.units.forEach(u => {
-      const opt = document.createElement("option");
-      opt.value = u;
-      opt.textContent = u;
-      unitSelect.appendChild(opt);
-    });
-
-    feedbackContainer.innerHTML = "";
-    const ua = document.getElementById("user-answer");
-    const fi = document.getElementById("formula-input");
-    const si = document.getElementById("substitution-input");
-    if (ua) ua.value = "";
-    if (fi) fi.value = "";
-    if (si) si.value = "";
-  }
-
-  // ====================================================================
-  //  KONTROLA ZÁPISU — LOGIKA
-  // ====================================================================
-  const unitSets = {
-    length: ["mm", "cm", "m", "km"],
-    energy: ["J", "kJ", "MJ"],
-    force:  ["N", "kN", "MN"],
-    power:  ["W", "kW", "MW"],
-    mass:   ["g", "kg", "t"],
-    time:   ["s", "min", "h"]
-  };
-  const symbolToKind = {
-    s: "length",
-    W: "energy", // práce
-    F: "force",
-    P: "power",
-    m: "mass",
-    t: "time",
-  };
-  const baseUnit = { length: "m", energy: "J", force: "N", power: "W", mass: "kg", time: "s" };
-
-  function toBase(value, unit, kind) {
-    if (value == null || unit == null || kind == null) return null;
-    const v = Number(value);
-    if (!isFinite(v)) return null;
-
-    switch (kind) {
-      case "length":
-        if (unit === "mm") return v / 1000;
-        if (unit === "cm") return v / 100;
-        if (unit === "m")  return v;
-        if (unit === "km") return v * 1000;
-        return null;
-      case "energy":
-        if (unit === "J")  return v;
-        if (unit === "kJ") return v * 1000;
-        if (unit === "MJ") return v * 1_000_000;
-        return null;
-      case "force":
-        if (unit === "N")  return v;
-        if (unit === "kN") return v * 1000;
-        if (unit === "MN") return v * 1_000_000;
-        return null;
-      case "power":
-        if (unit === "W")  return v;
-        if (unit === "kW") return v * 1000;
-        if (unit === "MW") return v * 1_000_000;
-        return null;
-      case "mass":
-        if (unit === "g")  return v / 1000;
-        if (unit === "kg") return v;
-        if (unit === "t")  return v * 1000;
-        return null;
-      case "time":
-        if (unit === "s")  return v;
-        if (unit === "min")return v * 60;
-        if (unit === "h")  return v * 3600;
-        return null;
-      default:
-        return null;
+    vykon:{
+      units:["W","kW"],
+      examples:[
+        {text:"Motor vykonal práci 12 000 J za 4 s. Jaký byl výkon?",
+         givens:[{symbol:"W",value:12000,unit:"J"},{symbol:"t",value:4,unit:"s"}],
+         result:12000/4},
+        {text:"Čerpadlo vykonává práci 24 kJ za 8 s. Jaký je výkon?",
+         givens:[{symbol:"W",value:24000,unit:"J"},{symbol:"t",value:8,unit:"s"}],
+         result:24000/8}
+      ]
     }
+  };
+
+  function generateProblem(){
+    const d=topics[selectedTopic];
+    const ex=d.examples[Math.floor(Math.random()*d.examples.length)];
+    currentProblem=ex;
+    document.getElementById("problem-text").textContent=ex.text;
   }
 
-  function nearlyEqual(a, b, tol = 1e-9) {
-    if (a == null || b == null) return false;
-    return Math.abs(a - b) <= tol * Math.max(1, Math.abs(a), Math.abs(b));
+  // ---------- Kontrola zápisu ----------
+  const unitSets={
+    length:["mm","cm","m","km"],energy:["J","kJ","MJ"],
+    force:["N","kN","MN"],power:["W","kW","MW"],
+    mass:["g","kg","t"],time:["s","min","h"]
+  };
+  const symbolToKind={s:"length",W:"energy",F:"force",P:"power",m:"mass",t:"time"};
+  const baseUnit={length:"m",energy:"J",force:"N",power:"W",mass:"kg",time:"s"};
+
+  function toBase(v,u,k){
+    v=Number(v);if(!isFinite(v))return null;
+    switch(k){
+      case"length":if(u=="mm")return v/1000;if(u=="cm")return v/100;if(u=="m")return v;if(u=="km")return v*1000;break;
+      case"energy":if(u=="J")return v;if(u=="kJ")return v*1000;if(u=="MJ")return v*1e6;break;
+      case"force":if(u=="N")return v;if(u=="kN")return v*1000;if(u=="MN")return v*1e6;break;
+      case"power":if(u=="W")return v;if(u=="kW")return v*1000;if(u=="MW")return v*1e6;break;
+      case"mass":if(u=="g")return v/1000;if(u=="kg")return v;if(u=="t")return v*1000;break;
+      case"time":if(u=="s")return v;if(u=="min")return v*60;if(u=="h")return v*3600;break;
+    }return null;
   }
+  const nearly=(a,b)=>Math.abs(a-b)<=1e-9*Math.max(1,Math.abs(a),Math.abs(b));
 
-  function collectZapis() {
-    const rows = Array.from(document.querySelectorAll("#zapis-container .zapis-row"));
-    return rows.map(row => {
-      const symbol = row.querySelector(".zapis-symbol")?.value?.trim() || "-";
-      const unit   = row.querySelector(".zapis-unit")?.value?.trim()   || "-";
-      const raw    = row.querySelector(".zapis-value")?.value?.trim()  || "";
-      const unknown= row.querySelector(".zapis-unknown")?.checked ?? false;
-
-      let value = null;
-      if (!unknown && raw && raw !== "?") value = Number((raw+"").replace(",", "."));
-
-      return { symbol, unit, value, raw, unknown };
+  function collect(){
+    return [...document.querySelectorAll("#zapis-container .zapis-row")].map(r=>{
+      const s=r.querySelector(".zapis-symbol").value.trim();
+      const u=r.querySelector(".zapis-unit").value.trim();
+      const raw=r.querySelector(".zapis-value").value.trim();
+      const unk=r.querySelector(".zapis-unknown").checked;
+      const val=(!unk&&raw&&raw!="?")?Number(raw.replace(",",".")):null;
+      return{symbol:s,unit:u,value:val,raw,unknown:unk};
     });
   }
 
-  function validateZapis() {
-    const errors = [];
-    const warnings = [];
-    const zapis = collectZapis();
-
-    // 5) Souhrn textem (vždy)
-    const summaryLines = zapis.map((r, i) => `${i+1}. ${r.symbol} = ${r.unknown ? "?" : (r.raw || "")} ${r.unit}` );
-    const summaryText = summaryLines.join("\n");
-
-    // 1) Kompatibilita veličina ↔ jednotka
-    for (const r of zapis) {
-      if (r.symbol === "-" || r.unit === "-") continue;
-      const kind = symbolToKind[r.symbol];
-      if (!kind) continue;
-      if (!unitSets[kind].includes(r.unit)) {
-        errors.push(`Veličina **${r.symbol}** neodpovídá jednotce **${r.unit}**. Opravte prosím jednotku.`);
-      }
-    }
-
-    // 2–4) Porovnání s „givens“ (hodnoty ze zadání)
-    const givens = currentProblem?.givens || [];
-    for (const g of givens) {
-      const kind = symbolToKind[g.symbol];
-      const row = zapis.find(r => r.symbol === g.symbol && !r.unknown);
-      if (!row) continue; // není zapsáno → nevyhazujeme chybu (může dopsat později)
-
-      if (row.raw === "?" || row.value == null) {
-        errors.push(`V řádku **${g.symbol}** chybí hodnota.`);
-        continue;
-      }
-
-      const baseGiven = toBase(g.value, g.unit, kind);
-      const baseRow   = toBase(row.value, row.unit, kind);
-      if (baseGiven == null || baseRow == null) continue;
-
-      if (nearlyEqual(baseGiven, baseRow)) {
-        // 4) stejné nezákladní jednotky jako v zadání → doporučení převést
-        const base = baseUnit[kind];
-        const isGivenBase = (g.unit === base);
-        const isRowBase   = (row.unit === base);
-        if (!isGivenBase && row.unit === g.unit && !isRowBase) {
-          warnings.push(`Veličina **${g.symbol}** je zapsaná jako **${g.value} ${g.unit}**. Převeďte ji prosím na základní jednotku **${base}**.`);
-        }
-      } else {
-        errors.push(`Veličina **${g.symbol}** neodpovídá zadání. Zkontrolujte hodnotu a jednotky.`);
-      }
-    }
-
-    return { errors, warnings, summaryText };
+  function validateZapis(){
+    const z=collect(),errors=[],warn=[];
+    const sum=z.map((r,i)=>`${i+1}. ${r.symbol} = ${r.unknown?"?":r.raw||""} ${r.unit}`).join("\n");
+    // 1) veličina↔jednotka
+    z.forEach(r=>{
+      const k=symbolToKind[r.symbol];
+      if(k&&!unitSets[k].includes(r.unit))
+        errors.push(`Veličina **${r.symbol}** neodpovídá jednotce **${r.unit}**.`);
+    });
+    // 2–4) kontrola proti zadání
+    const g=currentProblem?.givens||[];
+    g.forEach(gv=>{
+      const k=symbolToKind[gv.symbol];
+      const r=z.find(x=>x.symbol==gv.symbol&&!x.unknown);
+      if(!r)return;
+      if(r.raw=="?"||r.value==null){errors.push(`V řádku **${gv.symbol}** chybí hodnota.`);return;}
+      const bg=toBase(gv.value,gv.unit,k),br=toBase(r.value,r.unit,k);
+      if(bg==null||br==null)return;
+      if(nearly(bg,br)){
+        const base=baseUnit[k];
+        if(gv.unit!==base&&r.unit===gv.unit)
+          warn.push(`**${gv.symbol}** je v ${r.unit} – převeďte na ${base}.`);
+      }else errors.push(`**${gv.symbol}** neodpovídá zadání.`);
+    });
+    return{errors,warnings:warn,summary:sum};
   }
 
-  // ====================================================================
-  //  TUTORIÁL (beze změn)
-  // ====================================================================
-  const tutorialOverlay = document.getElementById("tutorial-overlay");
-  const tutorialBox = document.getElementById("tutorial-message-box");
-  const tutorialText = document.getElementById("tutorial-message-text");
-  const tutorialNext = document.getElementById("tutorial-next-button");
-  const tutorialEnd = document.getElementById("tutorial-end-button");
-  const tutorialCounter = document.getElementById("tutorial-step-counter");
-
-  const tutorialSteps = [
-    "Vítejte! Tato ukázka vám vysvětlí, jak postupovat při řešení.",
-    "Nejprve si přečtěte zadání a určete, co je známo a co se hledá.",
-    "Poté proveďte zápis a vyberte vhodný vzorec.",
-    "Nakonec vypočítejte výsledek a ověřte ho.",
-  ];
-
-  let tutorialIndex = 0;
-
-  startTutorialButton?.addEventListener("click", startTutorial);
-  tutorialNext?.addEventListener("click", nextTutorialStep);
-  tutorialEnd?.addEventListener("click", endTutorial);
-
-  function startTutorial() {
-    tutorialOverlay?.classList.remove("hidden");
-    tutorialBox?.classList.remove("hidden");
-    tutorialIndex = 0;
-    showTutorialStep();
+  function renderSummary(t){
+    const fb=document.getElementById("zapis-feedback-container");
+    fb.innerHTML=`<div class="p-3 bg-gray-900 border border-gray-700 rounded mb-3">
+      <div class="font-semibold mb-2 text-gray-300">Souhrn zápisu:</div>
+      <pre class="text-gray-200 text-sm whitespace-pre-wrap">${t}</pre>
+    </div>`;
   }
-  function showTutorialStep() {
-    if (tutorialText) tutorialText.textContent = tutorialSteps[tutorialIndex];
-    if (tutorialCounter) tutorialCounter.textContent = `Krok ${tutorialIndex + 1}/${tutorialSteps.length}`;
+  function renderIssues(err,warn){
+    const fb=document.getElementById("zapis-feedback-container");
+    const a=[];
+    if(err.length)a.push(`<div class="feedback-wrong"><b>Chyby:</b><ul>${err.map(e=>`<li>${e}</li>`).join("")}</ul></div>`);
+    if(warn.length)a.push(`<div class="feedback-correct"><b>Doporučení:</b><ul>${warn.map(w=>`<li>${w}</li>`).join("")}</ul></div>`);
+    if(!err.length&&!warn.length)a.push(`<div class="feedback-correct">👍 Zápis je v pořádku.</div>`);
+    fb.insertAdjacentHTML("beforeend",a.join(""));
   }
-  function nextTutorialStep() {
-    tutorialIndex++;
-    if (tutorialIndex >= tutorialSteps.length) endTutorial();
-    else showTutorialStep();
+  function renderReview(t){
+    const r=document.getElementById("zapis-review-container");
+    r.innerHTML=`<div class="p-3 bg-gray-900 border border-gray-700 rounded">
+      <div class="font-semibold mb-2 text-gray-300">Souhrn zápisu:</div>
+      <pre class="text-gray-200 text-sm whitespace-pre-wrap">${t}</pre>
+    </div>`;
   }
-  function endTutorial() {
-    tutorialOverlay?.classList.add("hidden");
-    tutorialBox?.classList.add("hidden");
+  function clearZapis(){
+    ["zapis-container","zapis-feedback-container","zapis-review-container"].forEach(id=>{
+      const e=document.getElementById(id);if(e)e.innerHTML="";
+    });
   }
 
-  // ====================================================================
   console.log("✅ Logika aplikace úspěšně načtena.");
 });

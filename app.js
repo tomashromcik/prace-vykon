@@ -1,36 +1,30 @@
+// ====================================================================
+//  app.js — Fyzika: Práce a výkon (opravená stabilní verze)
+// ====================================================================
+
 console.log("Načítání app.js ...");
 
-// Hlavní inicializační blok
-window.addEventListener("DOMContentLoaded", () => {
-  console.log("✅ DOM načten, inicializace aplikace...");
-{
+// Spouštíme vše až po načtení DOM
+document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ DOM načten, inicializace aplikace...");
 
-  const startButton = document.getElementById("start-button");
-  const topicSelect = document.getElementById("topic-select");
+  // --- ZÁKLADNÍ ELEMENTY ---
   const setupScreen = document.getElementById("setup-screen");
   const practiceScreen = document.getElementById("practice-screen");
+  const startButton = document.getElementById("start-button");
+  const topicSelect = document.getElementById("topic-select");
 
-  // Bezpečná kontrola, zda tlačítko existuje
-  if (!startButton) {
-    console.error("❌ Element start-button nebyl nalezen. Zkontroluj id v index.html!");
-    return;
-  }
+  const newProblemButton = document.getElementById("new-problem-button");
+  const backButton = document.getElementById("back-button");
+  const startTutorialButton = document.getElementById("start-tutorial-button");
 
-  // Příklad jednoduchého listeneru
-  startButton.addEventListener("click", () => {
-    console.log("▶️ Klik na tlačítko Spustit");
-    setupScreen?.classList.add("hidden");
-    practiceScreen?.classList.remove("hidden");
-  });
+  // --- STAVY ---
+  let selectedMode = null;
+  let selectedLevel = null;
+  let selectedTopic = "prace";
+  let currentProblem = null;
 
-  // Tady pokračuje zbytek tvého kódu…
-});
-
-
-// --- REŽIM A OBTÍŽNOST ---
-
-
+  // --- REŽIM A OBTÍŽNOST ---
   const modeButtons = document.querySelectorAll('[id^="mode-"]');
   const levelButtons = document.querySelectorAll('[id^="level-"]');
 
@@ -39,7 +33,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   modeButtons.forEach(btn => {
     btn.addEventListener("click", () => {
-      console.log(`Režim zvolen: ${btn.id}`);
+      console.log(`🎓 Režim zvolen: ${btn.id}`);
       modeButtons.forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
       btn.classList.add("ring-2", "ring-blue-500");
       selectedMode = btn.id.includes("practice") ? "practice" : "test";
@@ -49,14 +43,12 @@ window.addEventListener("DOMContentLoaded", () => {
 
   levelButtons.forEach(btn => {
     btn.addEventListener("click", () => {
-      console.log(`Obtížnost zvolena: ${btn.id}`);
+      console.log(`🎯 Obtížnost zvolena: ${btn.id}`);
       levelButtons.forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
       btn.classList.add("ring-2", "ring-blue-500");
-
       if (btn.id.includes("easy")) selectedLevel = "easy";
       if (btn.id.includes("normal")) selectedLevel = "normal";
       if (btn.id.includes("hard")) selectedLevel = "hard";
-
       updateStartButtonState();
     });
   });
@@ -81,23 +73,25 @@ window.addEventListener("DOMContentLoaded", () => {
   // --- START / ZPĚT / NOVÝ ---
   if (startButton) {
     startButton.addEventListener("click", () => {
-      console.log("▶️ Spuštěno");
-      setupScreen.classList.add("hidden");
-      practiceScreen.classList.remove("hidden");
+      console.log("▶️ Kliknuto na Spustit");
+      setupScreen?.classList.add("hidden");
+      practiceScreen?.classList.remove("hidden");
       generateNewProblem();
     });
   } else {
-    console.warn("⚠️ Nenalezen startButton");
+    console.error("❌ Nenalezen prvek start-button!");
   }
 
   backButton?.addEventListener("click", () => {
     console.log("⬅️ Zpět na úvod");
-    setupScreen.classList.remove("hidden");
-    practiceScreen.classList.add("hidden");
+    setupScreen?.classList.remove("hidden");
+    practiceScreen?.classList.add("hidden");
   });
 
-  newProblemButton?.addEventListener("click", generateNewProblem);
-
+  newProblemButton?.addEventListener("click", () => {
+    console.log("🔁 Nový příklad");
+    generateNewProblem();
+  });
 
   // ====================================================================
   //  GENERÁTOR PŘÍKLADŮ
@@ -105,7 +99,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const problemText = document.getElementById("problem-text");
   const resultLabel = document.getElementById("result-label");
   const unitSelect = document.getElementById("unit-select");
-
   const checkCalculationButton = document.getElementById("check-calculation-button");
   const feedbackContainer = document.getElementById("vypocet-feedback-container");
 
@@ -151,7 +144,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // ====================================================================
   //  OVĚŘENÍ VÝPOČTU
   // ====================================================================
-  checkCalculationButton.addEventListener("click", () => {
+  checkCalculationButton?.addEventListener("click", () => {
     const answer = parseFloat(document.getElementById("user-answer").value);
     if (isNaN(answer)) {
       showFeedback("Zadejte číselný výsledek.", false);
@@ -159,8 +152,10 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     const correct = Math.abs(answer - currentProblem.result) < 1;
-    if (correct) showFeedback("✅ Správně!", true);
-    else showFeedback(`❌ Špatně. Správný výsledek je přibližně ${currentProblem.result.toFixed(1)} ${unitSelect.value}.`, false);
+    if (correct)
+      showFeedback("✅ Správně!", true);
+    else
+      showFeedback(`❌ Špatně. Správný výsledek je přibližně ${currentProblem.result.toFixed(1)} ${unitSelect.value}.`, false);
   });
 
   function showFeedback(msg, isCorrect) {
@@ -175,6 +170,7 @@ window.addEventListener("DOMContentLoaded", () => {
     "open-formula-button": "formula-modal",
     "open-diagram-button": "diagram-modal",
   };
+
   Object.entries(modalMap).forEach(([openId, modalId]) => {
     const openBtn = document.getElementById(openId);
     const modal = document.getElementById(modalId);
@@ -194,12 +190,13 @@ window.addEventListener("DOMContentLoaded", () => {
   const calcDisplay = document.getElementById("calculator-display");
   const calcButtonsContainer = document.getElementById("calculator-buttons");
   const calcHistory = document.getElementById("calculator-history");
+
   if (calcButtonsContainer) {
     const buttons = [
-      "7","8","9","/",
-      "4","5","6","*",
-      "1","2","3","-",
-      "0",".","=","+",
+      "7", "8", "9", "/",
+      "4", "5", "6", "*",
+      "1", "2", "3", "-",
+      "0", ".", "=", "+",
       "C"
     ];
     buttons.forEach(b => {
@@ -209,18 +206,21 @@ window.addEventListener("DOMContentLoaded", () => {
       btn.addEventListener("click", () => handleCalcButton(b));
     });
   }
+
   let calcCurrent = "";
   function handleCalcButton(value) {
+    if (!calcDisplay) return;
+
     if (value === "C") {
       calcCurrent = "";
       calcDisplay.textContent = "0";
-      calcHistory.textContent = "";
+      if (calcHistory) calcHistory.textContent = "";
       return;
     }
     if (value === "=") {
       try {
         const result = eval(calcCurrent);
-        calcHistory.textContent = calcCurrent + " =";
+        if (calcHistory) calcHistory.textContent = calcCurrent + " =";
         calcDisplay.textContent = result;
         calcCurrent = result.toString();
       } catch {
@@ -233,7 +233,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // ====================================================================
-  //  TUTORIÁL (zjednodušená verze)
+  //  TUTORIÁL (zjednodušený)
   // ====================================================================
   const tutorialOverlay = document.getElementById("tutorial-overlay");
   const tutorialBox = document.getElementById("tutorial-message-box");
@@ -248,21 +248,22 @@ window.addEventListener("DOMContentLoaded", () => {
     "Poté proveďte zápis a vyberte vhodný vzorec.",
     "Nakonec vypočítejte výsledek a ověřte ho.",
   ];
+
   let tutorialIndex = 0;
 
-  startTutorialButton.addEventListener("click", startTutorial);
-  tutorialNext.addEventListener("click", nextTutorialStep);
-  tutorialEnd.addEventListener("click", endTutorial);
+  startTutorialButton?.addEventListener("click", startTutorial);
+  tutorialNext?.addEventListener("click", nextTutorialStep);
+  tutorialEnd?.addEventListener("click", endTutorial);
 
   function startTutorial() {
-    tutorialOverlay.classList.remove("hidden");
-    tutorialBox.classList.remove("hidden");
+    tutorialOverlay?.classList.remove("hidden");
+    tutorialBox?.classList.remove("hidden");
     tutorialIndex = 0;
     showTutorialStep();
   }
   function showTutorialStep() {
-    tutorialText.textContent = tutorialSteps[tutorialIndex];
-    tutorialCounter.textContent = `Krok ${tutorialIndex + 1}/${tutorialSteps.length}`;
+    if (tutorialText) tutorialText.textContent = tutorialSteps[tutorialIndex];
+    if (tutorialCounter) tutorialCounter.textContent = `Krok ${tutorialIndex + 1}/${tutorialSteps.length}`;
   }
   function nextTutorialStep() {
     tutorialIndex++;
@@ -270,10 +271,10 @@ window.addEventListener("DOMContentLoaded", () => {
     else showTutorialStep();
   }
   function endTutorial() {
-    tutorialOverlay.classList.add("hidden");
-    tutorialBox.classList.add("hidden");
+    tutorialOverlay?.classList.add("hidden");
+    tutorialBox?.classList.add("hidden");
   }
 
   // ====================================================================
-  console.log("Logika načtena.");
+  console.log("✅ Logika aplikace úspěšně načtena.");
 });

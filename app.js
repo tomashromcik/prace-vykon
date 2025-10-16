@@ -142,26 +142,49 @@ document.addEventListener("DOMContentLoaded", () => {
           break;
 
         // === Přidání řádku zápisu ===
-        case "add-zapis-row-button":
-          console.log("➕ Přidat novou veličinu do zápisu");
-          const zapisContainer = document.getElementById("zapis-container");
-          if (!zapisContainer) {
-            console.error("❌ Není nalezen #zapis-container");
-            break;
-          }
-          const row = document.createElement("div");
-          row.className = "grid grid-cols-1 sm:grid-cols-3 gap-2 zapis-row mt-2";
-          row.innerHTML = `
-            <input type="text" placeholder="Veličina (např. F)" 
-                   class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
-            <input type="number" placeholder="Hodnota (např. 12)" 
-                   class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
-            <input type="text" placeholder="Jednotka (např. N)" 
-                   class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
-          `;
-          zapisContainer.appendChild(row);
-          console.log("✅ Nový řádek zápisu přidán");
-          break;
+        case "add-zapis-row-button": {
+  console.log("➕ Přidat novou veličinu do zápisu");
+
+  const zapisStep = document.getElementById("zapis-step");
+  const zapisContainer = document.getElementById("zapis-container");
+
+  if (!zapisContainer) {
+    console.error("❌ Není nalezen #zapis-container");
+    break;
+  }
+
+  // pro jistotu zviditelnit krok Zápis
+  zapisStep?.classList.remove("hidden");
+
+  // vytvoř řádek + výrazné orámování kvůli ověření
+  const row = document.createElement("div");
+  row.className = "grid grid-cols-1 sm:grid-cols-3 gap-2 zapis-row mt-2";
+  row.style.border = "1px dashed #4b5563";
+  row.style.padding = "8px";
+  row.style.borderRadius = "10px";
+  row.style.background = "#0b1220";
+
+  row.innerHTML = `
+    <input type="text" placeholder="Veličina (např. F)"
+           class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
+    <input type="number" placeholder="Hodnota (např. 12)"
+           class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
+    <input type="text" placeholder="Jednotka (např. N)"
+           class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
+  `;
+
+  zapisContainer.appendChild(row);
+
+  // diagnostika: kolik máme řádků?
+  const count = zapisContainer.querySelectorAll(".zapis-row").length;
+  console.log(`✅ Nový řádek přidán. Celkem řádků: ${count}`);
+
+  // zviditelnit kontejner a poscrollovat k novému řádku
+  ensureVisible(zapisContainer);
+  row.scrollIntoView({ behavior: "smooth", block: "center" });
+  break;
+}
+
 
         case "new-problem-button":
           console.log("🔁 Nový příklad");

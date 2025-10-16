@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fyzika hrou – Práce a výkon</title>
+
+  <!-- Tailwind z CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="style.css" rel="stylesheet" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+</head>
+
+<body class="bg-gray-900 text-gray-200 font-inter min-h-screen flex flex-col">
+
+  <!-- 🔹 Horní navigace / hamburger -->
+  <header class="w-full bg-gray-800 border-b border-gray-700 p-3 flex justify-between items-center">
+    <h1 class="text-xl font-bold text-blue-400">Fyzika hrou</h1>
+    <button id="menu-toggle" class="md:hidden text-gray-300 focus:outline-none">
+      ☰
+    </button>
+    <nav id="main-menu" class="hidden md:flex gap-4 text-gray-300">
+      <button class="menu-link" data-action="back">🏠 Výběr režimu</button>
+      <button class="menu-link" data-action="new">🆕 Nový příklad</button>
+      <button class="menu-link" data-action="help">❓ Nápověda</button>
+      <button class="menu-link" data-action="formula">📘 Vzorce</button>
+      <button class="menu-link" data-action="calc">🧮 Kalkulačka</button>
+    </nav>
+  </header>
+
+  <!-- 🔹 Mobilní rozbalovací menu -->
+  <nav id="mobile-menu" class="hidden flex-col bg-gray-800 border-t border-gray-700 text-gray-200 md:hidden">
+    <button class="menu-link p-3 text-left border-b border-gray-700" data-action="back">🏠 Výběr režimu</button>
+    <button class="menu-link p-3 text-left border-b border-gray-700" data-action="new">🆕 Nový příklad</button>
+    <button class="menu-link p-3 text-left border-b border-gray-700" data-action="help">❓ Nápověda</button>
+    <button class="menu-link p-3 text-left border-b border-gray-700" data-action="formula">📘 Vzorce</button>
+    <button class="menu-link p-3 text-left" data-action="calc">🧮 Kalkulačka</button>
+  </nav>
+
+  <!-- 🔹 Hlavní obsah -->
+  <main class="flex-1 flex items-center justify-center p-4">
+    <div id="app-container" class="main-card w-full max-w-xl bg-gray-800 rounded-2xl p-6 shadow-xl">
+      <!-- Sem se bude načítat obsah aplikace (setup-screen, practice-screen, modály atd.) -->
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (dynamické řádky + kontrola zápisu)
+//  app.js — Fyzika: Práce a výkon (řádky + checkbox + kontrola zápisu)
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const practiceScreen = document.getElementById("practice-screen");
   const startButton = document.getElementById("start-button");
   const topicSelect = document.getElementById("topic-select");
-  const backButton = document.getElementById("back-button");
   const startTutorialButton = document.getElementById("start-tutorial-button");
 
   // --- STAVY ---
@@ -54,225 +53,221 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function updateStartButtonState() {
-    if (selectedMode && selectedLevel && selectedTopic) {
-      startButton.disabled = false;
-      startButton.classList.remove("btn-disabled");
-      console.log("✅ Start povolen");
-    } else {
-      startButton.disabled = true;
-      startButton.classList.add("btn-disabled");
-    }
+    const ok = selectedMode && selectedLevel && selectedTopic;
+    startButton.disabled = !ok;
+    startButton.classList.toggle("btn-disabled", !ok);
+    if (ok) console.log("✅ Start povolen");
   }
 
   // --- START ---
-  if (startButton) {
-    startButton.addEventListener("click", () => {
-      console.log("▶️ Kliknuto na Spustit");
-      setupScreen?.classList.add("hidden");
-      practiceScreen?.classList.remove("hidden");
-      generateNewProblem();
-      attachPracticeListeners();
-    });
-  }
+  startButton?.addEventListener("click", () => {
+    console.log("▶️ Kliknuto na Spustit");
+    setupScreen?.classList.add("hidden");
+    practiceScreen?.classList.remove("hidden");
+    clearZapis();
+    generateNewProblem();
+    attachPracticeListeners();
+  });
 
   // ====================================================================
-  //  INTERAKCE V REŽIMU PŘÍKLADŮ
+  //  INTERAKCE V REŽIMU PŘÍKLADŮ (delegace událostí)
   // ====================================================================
-
   function attachPracticeListeners() {
     console.log("🧩 Aktivace tlačítek v režimu příkladů...");
-
     const container = document.getElementById("practice-screen");
-    if (!container) {
-      console.error("❌ practice-screen nenalezen!");
-      return;
-    }
+    if (!container) return;
 
-    // Delegace událostí: nasloucháme klikům v celé sekci
     container.addEventListener("click", (e) => {
       const target = e.target.closest("button");
       if (!target) return;
-
       const id = target.id || "(bez ID)";
       console.log(`🟢 Klik: ${id}`);
 
       switch (id) {
-        // === Přidání řádku zápisu ===
+        // =========== ZÁPIS ===========
         case "add-zapis-row-button": {
-          console.log("➕ Přidat novou veličinu do zápisu");
-
-          const zapisContainer = document.getElementById("zapis-container");
-          if (!zapisContainer) {
-            console.error("❌ Není nalezen #zapis-container");
-            break;
-          }
-
-          // Seznamy veličin a jednotek podle obtížnosti
-          const veličinyEasy = ["-", "F", "s", "W"];
-          const jednotkyEasy = ["-", "cm", "m", "km", "J", "kJ", "MJ", "N", "kN", "MN"];
-
-          let availableSymbols = veličinyEasy;
-          let availableUnits = jednotkyEasy;
-          if (selectedLevel === "hard") {
-            availableSymbols = ["-", "F", "s", "W", "P", "t", "v", "m"];
-            availableUnits = ["-", "mm", "cm", "m", "km", "J", "kJ", "MJ", "N", "kN", "MN", "W", "kW", "MW", "kg", "g"];
-          }
-
-          const symOptions = availableSymbols.map(v => `<option value="${v}">${v}</option>`).join("");
-          const unitOptions = availableUnits.map(u => `<option value="${u}">${u}</option>`).join("");
-
-          const row = document.createElement("div");
-          row.className = "grid grid-cols-1 sm:grid-cols-4 gap-2 zapis-row mt-2 p-2 rounded-lg bg-gray-800 border border-gray-700";
-
-          row.innerHTML = `
-            <select class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500 zapis-symbol">
-              ${symOptions}
-            </select>
-            <input type="text" placeholder="Hodnota" 
-                   class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500 zapis-value">
-            <select class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500 zapis-unit">
-              ${unitOptions}
-            </select>
-            <label class="flex items-center gap-2 text-sm text-gray-300">
-              <input type="checkbox" class="zapis-unknown h-4 w-4">
-              <span>Hledaná veličina</span>
-            </label>
-            <div class="col-span-1 sm:col-span-4 text-xs text-blue-300 italic hidden row-hint"></div>
-          `;
-
-          // reakce na checkbox (hledaná veličina)
-          const valueInput = row.querySelector(".zapis-value");
-          const unitSelect = row.querySelector(".zapis-unit");
-          const unknownCb = row.querySelector(".zapis-unknown");
-
-          unknownCb.addEventListener("change", () => {
-            if (unknownCb.checked) {
-              valueInput.value = "?";
-              valueInput.setAttribute("disabled", "disabled");
-            } else {
-              if (valueInput.value === "?") valueInput.value = "";
-              valueInput.removeAttribute("disabled");
-            }
-          });
-
-          zapisContainer.appendChild(row);
+          const box = makeZapisRow();
+          document.getElementById("zapis-container")?.appendChild(box);
           console.log("✅ Nový řádek zápisu přidán");
           break;
         }
 
-        // === Kontrola zápisu ===
         case "check-zapis-button": {
           console.log("🧪 Kontrola zápisu");
-          const { errors, warnings, summaryLines } = validateZapis();
-          renderZapisFeedback(errors, warnings, summaryLines);
+          const { errors, warnings, summaryText } = validateZapis();
+          // souhrn zobraz v Zápisu (vždy)
+          renderSummaryInZapis(summaryText);
+          renderZapisIssues(errors, warnings);
 
           if (errors.length === 0) {
-            // přesun na krok Výpočet až když nejsou chyby v zápisu
             console.log("✅ Zápis v pořádku — přechod na výpočet");
+            // navíc zkopíruj souhrn i do recenzního boxu u Výpočtu
+            renderSummaryInReview(summaryText);
             document.getElementById("zapis-step")?.classList.add("hidden");
             document.getElementById("vypocet-step")?.classList.remove("hidden");
           } else {
-            console.log("❌ Zápis obsahuje chyby — zůstaneme v kroku Zápis");
+            console.log("❌ Zápis obsahuje chyby — zůstávám v kroku Zápis");
           }
           break;
         }
 
-        // === Ověření výpočtů (zatím placeholder) ===
+        // ========== VÝPOČET (zatím placeholder) ==========
         case "check-calculation-button":
         case "check-work-calculation-button":
         case "check-mass-calculation-button":
         case "check-force-calculation-button":
-          console.log(`✅ Ověření výpočtu: ${id}`);
-          showMainFeedback(`Zatím testovací ověření pro ${id}`, true);
+          showMainFeedback("Zatím testovací ověření výpočtu.", true);
           break;
 
-        // === Další příklad ===
-        case "next-button":
-          console.log("🔁 Další příklad (reset kroků)");
-          document.getElementById("zapis-step")?.classList.remove("hidden");
-          document.getElementById("vypocet-step")?.classList.add("hidden");
-          document.getElementById("result-step")?.classList.add("hidden");
-          clearZapis();
-          generateNewProblem();
-          break;
-
-        // === Modální okna ===
-        case "open-calculator-button":
-          toggleModal("calculator-modal", true);
-          break;
-        case "open-formula-button":
-          toggleModal("formula-modal", true);
-          break;
-        case "open-diagram-button":
-          toggleModal("diagram-modal", true);
-          break;
-        case "open-help-button":
-          alert("🧠 Nápověda: zapište známé veličiny z textu (v základních jednotkách), hledanou zaškrtněte.");
-          break;
-
-        // === Zavírání modálů ===
+        // ========== MODÁLY ==========
+        case "open-calculator-button": toggleModal("calculator-modal", true); break;
+        case "open-formula-button":    toggleModal("formula-modal", true);    break;
+        case "open-diagram-button":    toggleModal("diagram-modal", true);    break;
         case "close-calculator-button":
         case "close-formula-button":
         case "close-diagram-button":
           toggleModal(target.closest(".fixed")?.id, false);
           break;
 
-        // === Nový příklad (rychlé vygenerování) ===
+        // ========== DALŠÍ / NOVÝ ==========
         case "new-problem-button":
-          console.log("🔁 Nový příklad");
           clearZapis();
           generateNewProblem();
           break;
 
-        default:
-          break;
+        default: break;
       }
     });
   }
 
+  // vytvoří DOM uzel jednoho řádku zápisu (select veličina, hodnota, jednotka, checkbox)
+  function makeZapisRow() {
+    // sady podle obtížnosti
+    const symEasy = ["-", "F", "s", "W"];
+    const unitEasy = ["-", "cm", "m", "km", "J", "kJ", "MJ", "N", "kN", "MN"];
+    let symbols = symEasy, units = unitEasy;
+    if (selectedLevel === "hard") {
+      symbols = ["-", "F", "s", "W", "P", "t", "m"];
+      units = ["-", "mm", "cm", "m", "km", "J", "kJ", "MJ", "N", "kN", "MN", "W", "kW", "MW", "g", "kg", "t", "s", "min", "h"];
+    }
+
+    const row = document.createElement("div");
+    row.className = "grid grid-cols-1 sm:grid-cols-4 gap-2 zapis-row mt-2 p-2 rounded-lg bg-gray-800 border border-gray-700";
+
+    row.innerHTML = `
+      <select class="zapis-symbol p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500">
+        ${symbols.map(v => `<option value="${v}">${v}</option>`).join("")}
+      </select>
+      <input type="text" placeholder="Hodnota" class="zapis-value p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500">
+      <select class="zapis-unit p-2 rounded-md bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-blue-500">
+        ${units.map(u => `<option value="${u}">${u}</option>`).join("")}
+      </select>
+      <label class="flex items-center gap-2 text-sm text-gray-300">
+        <input type="checkbox" class="zapis-unknown h-4 w-4">
+        <span>Hledaná veličina</span>
+      </label>
+      <div class="col-span-1 sm:col-span-4 text-xs text-blue-300 italic hidden row-hint"></div>
+    `;
+
+    // logika checkboxu
+    const val = row.querySelector(".zapis-value");
+    const cb  = row.querySelector(".zapis-unknown");
+    cb.addEventListener("change", () => {
+      if (cb.checked) {
+        val.value = "?";
+        val.setAttribute("disabled", "disabled");
+      } else {
+        if (val.value === "?") val.value = "";
+        val.removeAttribute("disabled");
+      }
+    });
+
+    return row;
+    }
+
   // ====================================================================
-  //  POMOCNÉ FUNKCE UI
+  //  POMOCNÉ FUNKCE (UI)
   // ====================================================================
   function toggleModal(id, show) {
     const modal = document.getElementById(id);
     if (!modal) return;
-    if (show) modal.classList.remove("hidden");
-    else modal.classList.add("hidden");
+    modal.classList.toggle("hidden", !show);
   }
 
   function showMainFeedback(msg, isCorrect) {
-    const feedbackContainer = document.getElementById("vypocet-feedback-container");
-    if (!feedbackContainer) return;
-    feedbackContainer.innerHTML = `<div class="${isCorrect ? "feedback-correct" : "feedback-wrong"} mt-2">${msg}</div>`;
+    const box = document.getElementById("vypocet-feedback-container");
+    if (!box) return;
+    box.innerHTML = `<div class="${isCorrect ? "feedback-correct" : "feedback-wrong"} mt-2">${msg}</div>`;
+  }
+
+  function renderSummaryInZapis(text) {
+    // ukázat souhrn v kroku Zápis (aby ho žák viděl hned)
+    const fb = document.getElementById("zapis-feedback-container");
+    if (!fb) return;
+    fb.innerHTML = `
+      <div class="p-3 rounded-lg bg-gray-900 border border-gray-700 mb-3">
+        <div class="text-sm text-gray-300 font-semibold mb-2">Souhrn zápisu:</div>
+        <pre class="text-gray-200 text-sm whitespace-pre-wrap">${text}</pre>
+      </div>
+    `;
+  }
+
+  function renderSummaryInReview(text) {
+    // kopie souhrnu do boxu nad výpočtem
+    const rev = document.getElementById("zapis-review-container");
+    if (!rev) return;
+    rev.innerHTML = `
+      <div class="p-3 rounded-lg bg-gray-900 border border-gray-700">
+        <div class="text-sm text-gray-300 font-semibold mb-2">Souhrn zápisu:</div>
+        <pre class="text-gray-200 text-sm whitespace-pre-wrap">${text}</pre>
+      </div>
+    `;
+  }
+
+  function renderZapisIssues(errors, warnings) {
+    const fb = document.getElementById("zapis-feedback-container");
+    if (!fb) return;
+    const parts = [];
+    if (errors.length) {
+      parts.push(`
+        <div class="feedback-wrong mb-2">
+          <div class="font-semibold mb-1">Chyby v zápisu:</div>
+          <ul class="list-disc pl-5">${errors.map(e => `<li>${e}</li>`).join("")}</ul>
+        </div>
+      `);
+    }
+    if (warnings.length) {
+      parts.push(`
+        <div class="feedback-correct">
+          <div class="font-semibold mb-1">Doporučení:</div>
+          <ul class="list-disc pl-5">${warnings.map(w => `<li>${w}</li>`).join("")}</ul>
+        </div>
+      `);
+    }
+    fb.insertAdjacentHTML("beforeend", parts.join("\n"));
+    fb.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function clearZapis() {
-    document.getElementById("zapis-container").innerHTML = "";
-    document.getElementById("zapis-feedback-container").innerHTML = "";
-    document.getElementById("zapis-review-container").innerHTML = "";
+    const z = document.getElementById("zapis-container");
+    const fb = document.getElementById("zapis-feedback-container");
+    const rev = document.getElementById("zapis-review-container");
+    if (z) z.innerHTML = "";
+    if (fb) fb.innerHTML = "";
+    if (rev) rev.innerHTML = "";
   }
 
   // ====================================================================
-  //  GENERÁTOR PŘÍKLADŮ + DATA ZE ZADÁNÍ
+  //  GENERÁTOR PŘÍKLADŮ + „givens“ (hodnoty ze zadání)
   // ====================================================================
   const problemText = document.getElementById("problem-text");
   const unitSelect = document.getElementById("unit-select");
   const feedbackContainer = document.getElementById("vypocet-feedback-container");
 
-  // Každý příklad má navíc "givens": pole známých veličin a hodnot ze zadání
   const topics = {
     prace: {
       units: ["J", "kJ"],
       examples: [
-        {
-          text: "Dělník zvedl břemeno o hmotnosti 50 kg do výšky 2 m. Vypočítej práci.",
-          result: 50 * 10 * 2,
-          givens: [
-            { symbol: "s", value: 2, unit: "m" }, // dráha 2 m je explicitně v zadání
-            // m = 50 kg je v zadání, ale v úrovni easy/normal nezapisujeme m (spíš F nebo W jako hledaná)
-          ],
-          baseHints: { s: "m" }
-        },
         {
           text: "Auto působí silou 2 000 N na vzdálenost 5 m. Jakou práci vykoná?",
           result: 2000 * 5,
@@ -280,7 +275,14 @@ document.addEventListener("DOMContentLoaded", () => {
             { symbol: "F", value: 2000, unit: "N" },
             { symbol: "s", value: 5, unit: "m" },
           ],
-          baseHints: { F: "N", s: "m" }
+        },
+        {
+          text: "Dělník zvedl břemeno o hmotnosti 50 kg do výšky 2 m. Vypočítej práci.",
+          result: 50 * 10 * 2,
+          givens: [
+            { symbol: "s", value: 2, unit: "m" },
+            // síla se zde odvozuje (m*g), pro zápis necháme na žákovi
+          ],
         },
       ],
     },
@@ -294,16 +296,14 @@ document.addEventListener("DOMContentLoaded", () => {
             { symbol: "W", value: 12000, unit: "J" },
             { symbol: "t", value: 4, unit: "s" },
           ],
-          baseHints: { W: "J", t: "s" }
         },
         {
           text: "Čerpadlo vykonává práci 24 kJ za 8 s. Jaký je výkon?",
           result: 24000 / 8,
           givens: [
-            { symbol: "W", value: 24000, unit: "J" }, // 24 kJ = 24000 J (už normalizováno)
+            { symbol: "W", value: 24000, unit: "J" }, // 24 kJ převedeno
             { symbol: "t", value: 8, unit: "s" },
           ],
-          baseHints: { W: "J", t: "s" }
         },
       ],
     },
@@ -324,18 +324,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     feedbackContainer.innerHTML = "";
-    document.getElementById("user-answer").value = "";
-    document.getElementById("formula-input").value = "";
-    document.getElementById("substitution-input").value = "";
-
-    // vždyť chceme mít zadání viditelné ve všech krocích — to už zajišťuje #problem-text
+    const ua = document.getElementById("user-answer");
+    const fi = document.getElementById("formula-input");
+    const si = document.getElementById("substitution-input");
+    if (ua) ua.value = "";
+    if (fi) fi.value = "";
+    if (si) si.value = "";
   }
 
   // ====================================================================
-  //  KONTROLA ZÁPISU (logika dle požadavků)
+  //  KONTROLA ZÁPISU — LOGIKA
   // ====================================================================
-
-  // mapy kompatibility veličina ↔ jednotky
   const unitSets = {
     length: ["mm", "cm", "m", "km"],
     energy: ["J", "kJ", "MJ"],
@@ -346,16 +345,14 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   const symbolToKind = {
     s: "length",
-    W: "energy",   // práce
+    W: "energy", // práce
     F: "force",
     P: "power",
     m: "mass",
     t: "time",
-    v: "length"    // záměrně pro hard, pokud by se objevilo
   };
   const baseUnit = { length: "m", energy: "J", force: "N", power: "W", mass: "kg", time: "s" };
 
-  // převody -> na základní jednotky
   function toBase(value, unit, kind) {
     if (value == null || unit == null || kind == null) return null;
     const v = Number(value);
@@ -365,40 +362,40 @@ document.addEventListener("DOMContentLoaded", () => {
       case "length":
         if (unit === "mm") return v / 1000;
         if (unit === "cm") return v / 100;
-        if (unit === "m") return v;
+        if (unit === "m")  return v;
         if (unit === "km") return v * 1000;
         return null;
       case "energy":
-        if (unit === "J") return v;
+        if (unit === "J")  return v;
         if (unit === "kJ") return v * 1000;
         if (unit === "MJ") return v * 1_000_000;
         return null;
       case "force":
-        if (unit === "N") return v;
+        if (unit === "N")  return v;
         if (unit === "kN") return v * 1000;
         if (unit === "MN") return v * 1_000_000;
         return null;
       case "power":
-        if (unit === "W") return v;
+        if (unit === "W")  return v;
         if (unit === "kW") return v * 1000;
         if (unit === "MW") return v * 1_000_000;
         return null;
       case "mass":
-        if (unit === "g") return v / 1000;
+        if (unit === "g")  return v / 1000;
         if (unit === "kg") return v;
-        if (unit === "t") return v * 1000;
+        if (unit === "t")  return v * 1000;
         return null;
       case "time":
-        if (unit === "s") return v;
-        if (unit === "min") return v * 60;
-        if (unit === "h") return v * 3600;
+        if (unit === "s")  return v;
+        if (unit === "min")return v * 60;
+        if (unit === "h")  return v * 3600;
         return null;
       default:
         return null;
     }
   }
 
-  function nearlyEqual(a, b, tol = 1e-6) {
+  function nearlyEqual(a, b, tol = 1e-9) {
     if (a == null || b == null) return false;
     return Math.abs(a - b) <= tol * Math.max(1, Math.abs(a), Math.abs(b));
   }
@@ -406,121 +403,67 @@ document.addEventListener("DOMContentLoaded", () => {
   function collectZapis() {
     const rows = Array.from(document.querySelectorAll("#zapis-container .zapis-row"));
     return rows.map(row => {
-      const sym = row.querySelector(".zapis-symbol")?.value?.trim();
-      const valRaw = row.querySelector(".zapis-value")?.value?.trim();
-      const unt = row.querySelector(".zapis-unit")?.value?.trim();
-      const unknown = row.querySelector(".zapis-unknown")?.checked ?? false;
+      const symbol = row.querySelector(".zapis-symbol")?.value?.trim() || "-";
+      const unit   = row.querySelector(".zapis-unit")?.value?.trim()   || "-";
+      const raw    = row.querySelector(".zapis-value")?.value?.trim()  || "";
+      const unknown= row.querySelector(".zapis-unknown")?.checked ?? false;
 
-      let val = null;
-      if (!unknown && valRaw && valRaw !== "?") {
-        val = Number(valRaw.replace(",", "."));
-      }
+      let value = null;
+      if (!unknown && raw && raw !== "?") value = Number((raw+"").replace(",", "."));
 
-      return { symbol: sym || "-", value: val, valueRaw: valRaw, unit: unt || "-", unknown };
+      return { symbol, unit, value, raw, unknown };
     });
   }
 
   function validateZapis() {
     const errors = [];
     const warnings = [];
-    const summaryLines = [];
-
     const zapis = collectZapis();
 
-    // textový souhrn zápisu (5)
-    zapis.forEach((r, idx) => {
-      const valPart = r.unknown ? "?" : (r.valueRaw || "");
-      summaryLines.push(`${idx + 1}. ${r.symbol} = ${valPart} ${r.unit}`);
-    });
+    // 5) Souhrn textem (vždy)
+    const summaryLines = zapis.map((r, i) => `${i+1}. ${r.symbol} = ${r.unknown ? "?" : (r.raw || "")} ${r.unit}` );
+    const summaryText = summaryLines.join("\n");
 
-    // 1) kompatibilita veličina↔jednotka
+    // 1) Kompatibilita veličina ↔ jednotka
     for (const r of zapis) {
-      if (r.symbol === "-" || r.unit === "-") continue; // ignorujeme prázdné
+      if (r.symbol === "-" || r.unit === "-") continue;
       const kind = symbolToKind[r.symbol];
-      if (!kind) continue; // symbol, který teď neřešíme
-      const allowed = unitSets[kind] || [];
-      if (!allowed.includes(r.unit)) {
+      if (!kind) continue;
+      if (!unitSets[kind].includes(r.unit)) {
         errors.push(`Veličina **${r.symbol}** neodpovídá jednotce **${r.unit}**. Opravte prosím jednotku.`);
       }
     }
 
-    // 2–4) porovnání se zadáním (včetně převodů a výzvy k převodu na základní jednotky)
+    // 2–4) Porovnání s „givens“ (hodnoty ze zadání)
     const givens = currentProblem?.givens || [];
     for (const g of givens) {
-      // najdi řádek v zápisu se stejným symbolem
-      const row = zapis.find(r => r.symbol === g.symbol && !r.unknown);
-      if (!row) continue; // žák nemusí zapsat vše; nevyhazujeme chybu
-
       const kind = symbolToKind[g.symbol];
-      if (!kind) continue;
+      const row = zapis.find(r => r.symbol === g.symbol && !r.unknown);
+      if (!row) continue; // není zapsáno → nevyhazujeme chybu (může dopsat později)
 
-      const baseGiven = toBase(g.value, g.unit, kind);
-      const baseRow = toBase(row.value, row.unit, kind);
-
-      if (row.valueRaw === "?" || row.value == null) {
+      if (row.raw === "?" || row.value == null) {
         errors.push(`V řádku **${g.symbol}** chybí hodnota.`);
         continue;
       }
 
+      const baseGiven = toBase(g.value, g.unit, kind);
+      const baseRow   = toBase(row.value, row.unit, kind);
       if (baseGiven == null || baseRow == null) continue;
 
-      // 3) akceptuj převedené (např. 10 km == 10000 m)
       if (nearlyEqual(baseGiven, baseRow)) {
-        // 4) pokud žák použil stejnou ne-základní jednotku jako v zadání → varování k převodu
-        const isGivenBase = (g.unit === baseUnit[kind]);
-        const isRowBase = (row.unit === baseUnit[kind]);
+        // 4) stejné nezákladní jednotky jako v zadání → doporučení převést
+        const base = baseUnit[kind];
+        const isGivenBase = (g.unit === base);
+        const isRowBase   = (row.unit === base);
         if (!isGivenBase && row.unit === g.unit && !isRowBase) {
-          warnings.push(`Veličina **${g.symbol}** je zapsaná jako **${g.value} ${g.unit}**. Převeďte ji prosím na základní jednotku **${baseUnit[kind]}**.`);
+          warnings.push(`Veličina **${g.symbol}** je zapsaná jako **${g.value} ${g.unit}**. Převeďte ji prosím na základní jednotku **${base}**.`);
         }
       } else {
-        // 2) neodpovídá hodnota ze zadání
         errors.push(`Veličina **${g.symbol}** neodpovídá zadání. Zkontrolujte hodnotu a jednotky.`);
       }
     }
 
-    return { errors, warnings, summaryLines };
-  }
-
-  function renderZapisFeedback(errors, warnings, summaryLines) {
-    const fb = document.getElementById("zapis-feedback-container");
-    const rev = document.getElementById("zapis-review-container");
-
-    // Souhrn zápisu (textem)
-    rev.innerHTML = `
-      <div class="p-3 rounded-lg bg-gray-900 border border-gray-700">
-        <div class="text-sm text-gray-300 font-semibold mb-2">Souhrn zápisu:</div>
-        <pre class="text-gray-200 text-sm whitespace-pre-wrap">${summaryLines.join("\n")}</pre>
-      </div>
-    `;
-
-    // Chyby a varování
-    const parts = [];
-    if (errors.length) {
-      parts.push(`
-        <div class="feedback-wrong">
-          <div class="font-semibold mb-1">Chyby v zápisu:</div>
-          <ul class="list-disc pl-5">
-            ${errors.map(e => `<li>${e}</li>`).join("")}
-          </ul>
-        </div>
-      `);
-    }
-    if (warnings.length) {
-      parts.push(`
-        <div class="feedback-correct">
-          <div class="font-semibold mb-1">Doporučení:</div>
-          <ul class="list-disc pl-5">
-            ${warnings.map(w => `<li>${w}</li>`).join("")}
-          </ul>
-        </div>
-      `);
-    }
-    if (!errors.length && !warnings.length) {
-      parts.push(`<div class="feedback-correct">👍 Zápis vypadá v pořádku.</div>`);
-    }
-
-    fb.innerHTML = parts.join("\n");
-    fb.scrollIntoView({ behavior: "smooth", block: "center" });
+    return { errors, warnings, summaryText };
   }
 
   // ====================================================================
@@ -552,18 +495,15 @@ document.addEventListener("DOMContentLoaded", () => {
     tutorialIndex = 0;
     showTutorialStep();
   }
-
   function showTutorialStep() {
     if (tutorialText) tutorialText.textContent = tutorialSteps[tutorialIndex];
     if (tutorialCounter) tutorialCounter.textContent = `Krok ${tutorialIndex + 1}/${tutorialSteps.length}`;
   }
-
   function nextTutorialStep() {
     tutorialIndex++;
     if (tutorialIndex >= tutorialSteps.length) endTutorial();
     else showTutorialStep();
   }
-
   function endTutorial() {
     tutorialOverlay?.classList.add("hidden");
     tutorialBox?.classList.add("hidden");

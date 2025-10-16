@@ -1,0 +1,26 @@
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Karta aplikace */
+.main-card {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Tlačítka menu */
+.menu-link {
+  transition: background-color 0.2s ease;
+}
+.menu-link:hover {
+  background-color: #374151; /* gray-700 */
+}
+
+/* Responsivní úpravy */
+@media (max-width: 768px) {
+  #mobile-menu {
+    display: none;
+  }
+  #mobile-menu.active {
+    display: flex;
+  }
+}

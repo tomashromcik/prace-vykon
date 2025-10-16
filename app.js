@@ -70,17 +70,52 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // --- START / ZPĚT / NOVÝ ---
-  if (startButton) {
-    startButton.addEventListener("click", () => {
-      console.log("▶️ Kliknuto na Spustit");
-      setupScreen?.classList.add("hidden");
-      practiceScreen?.classList.remove("hidden");
+ if (startButton) {
+  startButton.addEventListener("click", () => {
+    console.log("▶️ Kliknuto na Spustit");
+    setupScreen?.classList.add("hidden");
+    practiceScreen?.classList.remove("hidden");
+    generateNewProblem();
+
+    // Po přepnutí aktivuj vnitřní tlačítka
+    attachPracticeListeners();
+  });
+} else {
+  console.error("❌ Nenalezen prvek start-button!");
+}
+
+// === Nová funkce ===
+function attachPracticeListeners() {
+  console.log("🧩 Aktivace tlačítek v režimu příkladů...");
+
+  const checkButton = document.getElementById("check-calculation-button");
+  const newProblemBtn = document.getElementById("new-problem-button");
+  const openCalc = document.getElementById("open-calculator-button");
+  const openFormula = document.getElementById("open-formula-button");
+  const openDiagram = document.getElementById("open-diagram-button");
+
+  if (checkButton) {
+    checkButton.addEventListener("click", () => {
+      console.log("🧮 Kliknuto na Ověřit výpočet");
+    });
+  }
+  if (newProblemBtn) {
+    newProblemBtn.addEventListener("click", () => {
+      console.log("🔁 Nový příklad v režimu příkladů");
       generateNewProblem();
     });
-  } else {
-    console.error("❌ Nenalezen prvek start-button!");
   }
+  if (openCalc) {
+    openCalc.addEventListener("click", () => console.log("🧠 Otevřít kalkulačku"));
+  }
+  if (openFormula) {
+    openFormula.addEventListener("click", () => console.log("📘 Otevřít vzorec"));
+  }
+  if (openDiagram) {
+    openDiagram.addEventListener("click", () => console.log("📊 Otevřít schéma"));
+  }
+}
+
 
   backButton?.addEventListener("click", () => {
     console.log("⬅️ Zpět na úvod");

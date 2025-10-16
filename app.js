@@ -1,20 +1,17 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (opravená stabilní verze)
+//  app.js — Fyzika: Práce a výkon (verze 2025-10, funkční + interaktivní)
 // ====================================================================
 
 console.log("Načítání app.js ...");
 
-// Spouštíme vše až po načtení DOM
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ DOM načten, inicializace aplikace...");
 
-  // --- ZÁKLADNÍ ELEMENTY ---
+  // --- HLAVNÍ ELEMENTY ---
   const setupScreen = document.getElementById("setup-screen");
   const practiceScreen = document.getElementById("practice-screen");
   const startButton = document.getElementById("start-button");
   const topicSelect = document.getElementById("topic-select");
-
-  const newProblemButton = document.getElementById("new-problem-button");
   const backButton = document.getElementById("back-button");
   const startTutorialButton = document.getElementById("start-tutorial-button");
 
@@ -27,9 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- REŽIM A OBTÍŽNOST ---
   const modeButtons = document.querySelectorAll('[id^="mode-"]');
   const levelButtons = document.querySelectorAll('[id^="level-"]');
-
-  if (modeButtons.length === 0) console.warn("⚠️ Nebyla nalezena žádná tlačítka režimu.");
-  if (levelButtons.length === 0) console.warn("⚠️ Nebyla nalezena žádná tlačítka úrovně.");
 
   modeButtons.forEach(btn => {
     btn.addEventListener("click", () => {
@@ -55,7 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   topicSelect?.addEventListener("change", e => {
     selectedTopic = e.target.value;
-    console.log("Téma:", selectedTopic);
+    console.log("📘 Téma:", selectedTopic);
     updateStartButtonState();
   });
 
@@ -70,85 +64,131 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
- if (startButton) {
-  startButton.addEventListener("click", () => {
-    console.log("▶️ Kliknuto na Spustit");
-    setupScreen?.classList.add("hidden");
-    practiceScreen?.classList.remove("hidden");
-    generateNewProblem();
-
-    // Po přepnutí aktivuj vnitřní tlačítka
-    attachPracticeListeners();
-  });
-} else {
-  console.error("❌ Nenalezen prvek start-button!");
-}
-
-// === Nová funkce ===
-function attachPracticeListeners() {
-  console.log("🧩 Aktivace tlačítek v režimu příkladů...");
-
-  const container = document.getElementById("practice-screen");
-  if (!container) {
-    console.error("❌ practice-screen nenalezen!");
-    return;
+  // --- START ---
+  if (startButton) {
+    startButton.addEventListener("click", () => {
+      console.log("▶️ Kliknuto na Spustit");
+      setupScreen?.classList.add("hidden");
+      practiceScreen?.classList.remove("hidden");
+      generateNewProblem();
+      attachPracticeListeners();
+    });
   }
 
-  // Delegace událostí: nasloucháme klikům v celé sekci
-  container.addEventListener("click", (e) => {
-    const target = e.target.closest("button");
-    if (!target) return;
+  // ====================================================================
+  //  INTERAKCE V REŽIMU PŘÍKLADŮ
+  // ====================================================================
 
-    const id = target.id || "(bez ID)";
-    console.log(`🟢 Klik: ${id}`);
+  function attachPracticeListeners() {
+    console.log("🧩 Aktivace tlačítek v režimu příkladů...");
 
-   switch (id) {
-  // === Přepínání kroků ===
-  case "check-zapis-button":
-    console.log("➡️ Přechod na krok: výpočet");
-    document.getElementById("zapis-step")?.classList.add("hidden");
-    document.getElementById("vypocet-step")?.classList.remove("hidden");
-    break;
+    const container = document.getElementById("practice-screen");
+    if (!container) {
+      console.error("❌ practice-screen nenalezen!");
+      return;
+    }
 
-  case "check-calculation-button":
-  case "check-work-calculation-button":
-  case "check-mass-calculation-button":
-  case "check-force-calculation-button":
-    console.log(`✅ Ověření výpočtu: ${id}`);
-    showFeedback(`Zatím testovací ověření pro ${id}`, true);
-    break;
+    // Delegace událostí: nasloucháme klikům v celé sekci
+    container.addEventListener("click", (e) => {
+      const target = e.target.closest("button");
+      if (!target) return;
 
-  case "next-button":
-    console.log("🔁 Další příklad (reset kroků)");
-    document.getElementById("zapis-step")?.classList.remove("hidden");
-    document.getElementById("vypocet-step")?.classList.add("hidden");
-    document.getElementById("result-step")?.classList.add("hidden");
-    generateNewProblem();
-    break;
+      const id = target.id || "(bez ID)";
+      console.log(`🟢 Klik: ${id}`);
 
-  // === Modální okna ===
-  case "open-calculator-button":
-    toggleModal("calculator-modal", true);
-    break;
-  case "open-formula-button":
-    toggleModal("formula-modal", true);
-    break;
-  case "open-diagram-button":
-    toggleModal("diagram-modal", true);
-    break;
-  case "open-help-button":
-    alert("Tady bude nápověda 💡");
-    break;
+      switch (id) {
+        // === Přepínání kroků ===
+        case "check-zapis-button":
+          console.log("➡️ Přechod na krok: výpočet");
+          document.getElementById("zapis-step")?.classList.add("hidden");
+          document.getElementById("vypocet-step")?.classList.remove("hidden");
+          break;
 
-  // === Zavírání modálů ===
-  case "close-calculator-button":
-  case "close-formula-button":
-  case "c
+        case "check-calculation-button":
+        case "check-work-calculation-button":
+        case "check-mass-calculation-button":
+        case "check-force-calculation-button":
+          console.log(`✅ Ověření výpočtu: ${id}`);
+          showFeedback(`Zatím testovací ověření pro ${id}`, true);
+          break;
 
-  });
-}
+        case "next-button":
+          console.log("🔁 Další příklad (reset kroků)");
+          document.getElementById("zapis-step")?.classList.remove("hidden");
+          document.getElementById("vypocet-step")?.classList.add("hidden");
+          document.getElementById("result-step")?.classList.add("hidden");
+          generateNewProblem();
+          break;
 
+        // === Modální okna ===
+        case "open-calculator-button":
+          toggleModal("calculator-modal", true);
+          break;
+        case "open-formula-button":
+          toggleModal("formula-modal", true);
+          break;
+        case "open-diagram-button":
+          toggleModal("diagram-modal", true);
+          break;
+        case "open-help-button":
+          alert("🧠 Tady bude nápověda!");
+          break;
 
+        // === Zavírání modálů ===
+        case "close-calculator-button":
+        case "close-formula-button":
+        case "close-diagram-button":
+          toggleModal(target.closest(".fixed")?.id, false);
+          break;
+
+        // === Přidání řádku zápisu ===
+        case "add-zapis-row-button":
+          console.log("➕ Přidat novou veličinu do zápisu");
+          const zapisContainer = document.getElementById("zapis-container");
+          if (!zapisContainer) {
+            console.error("❌ Není nalezen #zapis-container");
+            break;
+          }
+          const row = document.createElement("div");
+          row.className = "grid grid-cols-1 sm:grid-cols-3 gap-2 zapis-row mt-2";
+          row.innerHTML = `
+            <input type="text" placeholder="Veličina (např. F)" 
+                   class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
+            <input type="number" placeholder="Hodnota (např. 12)" 
+                   class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
+            <input type="text" placeholder="Jednotka (např. N)" 
+                   class="p-2 rounded-md bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-blue-500 text-white">
+          `;
+          zapisContainer.appendChild(row);
+          console.log("✅ Nový řádek zápisu přidán");
+          break;
+
+        case "new-problem-button":
+          console.log("🔁 Nový příklad");
+          generateNewProblem();
+          break;
+
+        default:
+          break;
+      }
+    });
+  }
+
+  // ====================================================================
+  //  POMOCNÉ FUNKCE
+  // ====================================================================
+  function toggleModal(id, show) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    if (show) modal.classList.remove("hidden");
+    else modal.classList.add("hidden");
+  }
+
+  function showFeedback(msg, isCorrect) {
+    const feedbackContainer = document.getElementById("vypocet-feedback-container");
+    if (!feedbackContainer) return;
+    feedbackContainer.innerHTML = `<div class="${isCorrect ? "feedback-correct" : "feedback-wrong"} mt-2">${msg}</div>`;
+  }
 
   // ====================================================================
   //  GENERÁTOR PŘÍKLADŮ
@@ -156,7 +196,6 @@ function attachPracticeListeners() {
   const problemText = document.getElementById("problem-text");
   const resultLabel = document.getElementById("result-label");
   const unitSelect = document.getElementById("unit-select");
-  const checkCalculationButton = document.getElementById("check-calculation-button");
   const feedbackContainer = document.getElementById("vypocet-feedback-container");
 
   const topics = {
@@ -182,7 +221,6 @@ function attachPracticeListeners() {
     currentProblem = example;
     problemText.textContent = example.text;
 
-    // jednotky
     unitSelect.innerHTML = "";
     data.units.forEach(u => {
       const opt = document.createElement("option");
@@ -191,7 +229,6 @@ function attachPracticeListeners() {
       unitSelect.appendChild(opt);
     });
 
-    // reset polí
     feedbackContainer.innerHTML = "";
     document.getElementById("user-answer").value = "";
     document.getElementById("formula-input").value = "";
@@ -201,6 +238,8 @@ function attachPracticeListeners() {
   // ====================================================================
   //  OVĚŘENÍ VÝPOČTU
   // ====================================================================
+  const checkCalculationButton = document.getElementById("check-calculation-button");
+
   checkCalculationButton?.addEventListener("click", () => {
     const answer = parseFloat(document.getElementById("user-answer").value);
     if (isNaN(answer)) {
@@ -212,85 +251,11 @@ function attachPracticeListeners() {
     if (correct)
       showFeedback("✅ Správně!", true);
     else
-      showFeedback(`❌ Špatně. Správný výsledek je přibližně ${currentProblem.result.toFixed(1)} ${unitSelect.value}.`, false);
-  });
-
-  function showFeedback(msg, isCorrect) {
-    feedbackContainer.innerHTML = `<div class="${isCorrect ? "feedback-correct" : "feedback-wrong"}">${msg}</div>`;
-  }
-
-  // ====================================================================
-  //  MODÁLY (Kalkulačka, Vzorec, Schéma)
-  // ====================================================================
-  const modalMap = {
-    "open-calculator-button": "calculator-modal",
-    "open-formula-button": "formula-modal",
-    "open-diagram-button": "diagram-modal",
-  };
-
-  Object.entries(modalMap).forEach(([openId, modalId]) => {
-    const openBtn = document.getElementById(openId);
-    const modal = document.getElementById(modalId);
-    const closeBtn = modal?.querySelector("button[id^='close']");
-    if (openBtn && modal && closeBtn) {
-      openBtn.addEventListener("click", () => modal.classList.remove("hidden"));
-      closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
-      modal.addEventListener("click", e => {
-        if (e.target === modal) modal.classList.add("hidden");
-      });
-    }
+      showFeedback(`❌ Špatně. Správný výsledek je ${currentProblem.result.toFixed(1)} ${unitSelect.value}.`, false);
   });
 
   // ====================================================================
-  //  KALKULAČKA
-  // ====================================================================
-  const calcDisplay = document.getElementById("calculator-display");
-  const calcButtonsContainer = document.getElementById("calculator-buttons");
-  const calcHistory = document.getElementById("calculator-history");
-
-  if (calcButtonsContainer) {
-    const buttons = [
-      "7", "8", "9", "/",
-      "4", "5", "6", "*",
-      "1", "2", "3", "-",
-      "0", ".", "=", "+",
-      "C"
-    ];
-    buttons.forEach(b => {
-      const btn = document.createElement("button");
-      btn.textContent = b;
-      calcButtonsContainer.appendChild(btn);
-      btn.addEventListener("click", () => handleCalcButton(b));
-    });
-  }
-
-  let calcCurrent = "";
-  function handleCalcButton(value) {
-    if (!calcDisplay) return;
-
-    if (value === "C") {
-      calcCurrent = "";
-      calcDisplay.textContent = "0";
-      if (calcHistory) calcHistory.textContent = "";
-      return;
-    }
-    if (value === "=") {
-      try {
-        const result = eval(calcCurrent);
-        if (calcHistory) calcHistory.textContent = calcCurrent + " =";
-        calcDisplay.textContent = result;
-        calcCurrent = result.toString();
-      } catch {
-        calcDisplay.textContent = "Chyba";
-      }
-      return;
-    }
-    calcCurrent += value;
-    calcDisplay.textContent = calcCurrent;
-  }
-
-  // ====================================================================
-  //  TUTORIÁL (zjednodušený)
+  //  TUTORIÁL
   // ====================================================================
   const tutorialOverlay = document.getElementById("tutorial-overlay");
   const tutorialBox = document.getElementById("tutorial-message-box");
@@ -318,15 +283,18 @@ function attachPracticeListeners() {
     tutorialIndex = 0;
     showTutorialStep();
   }
+
   function showTutorialStep() {
     if (tutorialText) tutorialText.textContent = tutorialSteps[tutorialIndex];
     if (tutorialCounter) tutorialCounter.textContent = `Krok ${tutorialIndex + 1}/${tutorialSteps.length}`;
   }
+
   function nextTutorialStep() {
     tutorialIndex++;
     if (tutorialIndex >= tutorialSteps.length) endTutorial();
     else showTutorialStep();
   }
+
   function endTutorial() {
     tutorialOverlay?.classList.add("hidden");
     tutorialBox?.classList.add("hidden");

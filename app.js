@@ -1,5 +1,5 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (verze 2025-10-17, s automatickým převodem jednotek)
+//  app.js — Fyzika: Práce a výkon (verze 2025-10-18, s novými zadáními)
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -7,7 +7,6 @@ console.log("Načítání app.js ...");
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ DOM načten, inicializace aplikace...");
 
-  // ---------- Globální proměnné ----------
   let selectedMode = null;
   let selectedLevel = null;
   let selectedTopic = "prace";
@@ -18,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const startButton = document.getElementById("start-button");
   const topicSelect = document.getElementById("topic-select");
 
-  // ---------- Režim a obtížnost ----------
+  // ---------- Volba režimu / obtížnosti ----------
   document.querySelectorAll('[id^="mode-"]').forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll('[id^="mode-"]').forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
@@ -51,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (ready) console.log("✅ Start povolen");
   }
 
-  // ---------- Spuštění aplikace ----------
+  // ---------- Spuštění ----------
   startButton?.addEventListener("click", () => {
     setupScreen.classList.add("hidden");
     practiceScreen.classList.remove("hidden");
@@ -72,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const unitEasy = ["-", "cm", "m", "km", "J", "kJ", "MJ", "N", "kN", "MN"];
     let sy = symEasy, un = unitEasy;
 
-    if (selectedLevel === "hard") {
+    if (selectedLevel === "hard" || selectedLevel === "normal") {
       sy = ["-", "F", "s", "W", "P", "t", "m"];
       un = ["-", "mm", "cm", "m", "km", "J", "kJ", "MJ", "N", "kN", "MN", "W", "kW", "MW", "g", "kg", "t", "s", "min", "h"];
     }
@@ -140,17 +139,46 @@ document.addEventListener("DOMContentLoaded", () => {
     vykon: {
       units: ["W", "kW"],
       examples: [
-        { text: "Motor vykonal práci 12 000 J za 4 s. Jaký byl výkon?", givens: [{ symbol: "W", value: 12000, unit: "J" }, { symbol: "t", value: 4, unit: "s" }], result: 12000 / 4 },
-        { text: "Čerpadlo vykonává práci 24 kJ za 8 s. Jaký je výkon?", givens: [{ symbol: "W", value: 24000, unit: "J" }, { symbol: "t", value: 8, unit: "s" }], result: 24000 / 8 }
+        // === Nové dynamické úlohy pro úroveň normální ===
+        {
+          text: () => {
+            const F = Math.floor(1 + Math.random() * 9); // 1–9 kN
+            return `Těleso bylo přesunuto silou ${F} kN po dráze 2 m. Jaká práce byla vykonána?`;
+          },
+          givens: [{ symbol: "F", value: 0, unit: "N" }, { symbol: "s", value: 2, unit: "m" }],
+          generator: (F) => F * 1000 * 2
+        },
+        {
+          text: () => {
+            const s = Math.floor(1 + Math.random() * 5); // 1–5 km
+            const F = Math.floor(1000 + Math.random() * 4000); // 1000–5000 N
+            return `Auto jelo rovnoměrným přímočarým pohybem po dráze ${s} km. Tahová síla motoru byla ${F} N.`;
+          },
+          givens: [{ symbol: "s", value: 0, unit: "m" }, { symbol: "F", value: 0, unit: "N" }],
+          generator: (s, F) => (s * 1000) * F
+        }
       ]
     }
   };
 
   function generateProblem() {
     const d = topics[selectedTopic];
-    const ex = d.examples[Math.floor(Math.random() * d.examples.length)];
-    currentProblem = ex;
-    document.getElementById("problem-text").textContent = ex.text;
+    const base = d.examples[Math.floor(Math.random() * d.examples.length)];
+
+    if (typeof base.text === "function") {
+      // dynamické příklady
+      const t = base.text();
+      let F = (t.includes("kN")) ? parseInt(t.match(/(\d+)\s*kN/)[1]) : null;
+      let s = (t.includes("km")) ? parseInt(t.match(/(\d+)\s*km/)[1]) : 2;
+
+      const result = base.generator ? base.generator(s, F || s) : 0;
+      currentProblem = { text: t, givens: base.givens, result };
+    } else {
+      currentProblem = base;
+    }
+
+    document.getElementById("problem-text").textContent = currentProblem.text;
+    console.log("🆕 Nový příklad:", currentProblem.text);
   }
 
   // ---------- Validace ----------
@@ -171,11 +199,8 @@ document.addEventListener("DOMContentLoaded", () => {
       case "length": if (u == "mm") return v / 1000; if (u == "cm") return v / 100; if (u == "km") return v * 1000; return v;
       case "energy": if (u == "kJ") return v * 1000; if (u == "MJ") return v * 1e6; return v;
       case "force": if (u == "kN") return v * 1000; if (u == "MN") return v * 1e6; return v;
-      case "power": if (u == "kW") return v * 1000; if (u == "MW") return v * 1e6; return v;
-      case "mass": if (u == "g") return v / 1000; if (u == "t") return v * 1000; return v;
-      case "time": if (u == "min") return v * 60; if (u == "h") return v * 3600; return v;
+      default: return v;
     }
-    return null;
   }
 
   function nearly(a, b) { return Math.abs(a - b) < 1e-9 * Math.max(1, Math.abs(a), Math.abs(b)); }
@@ -194,33 +219,21 @@ document.addEventListener("DOMContentLoaded", () => {
   function validateZapis() {
     const z = collect(), errors = [], warnings = [], conversions = [];
     const summary = z.map((r, i) => `${i + 1}. ${r.symbol} = ${r.unknown ? "?" : r.raw || ""} ${r.unit}`).join("\n");
-    const g = currentProblem?.givens || [];
 
     z.forEach(r => {
       const k = symbolToKind[r.symbol];
-      if (!k) return;
-      if (!unitSets[k].includes(r.unit)) {
+      if (k && !unitSets[k].includes(r.unit))
         errors.push(`Veličina ${r.symbol} neodpovídá jednotce ${r.unit}.`);
-      }
     });
 
-    g.forEach(gv => {
-      const k = symbolToKind[gv.symbol];
-      const r = z.find(x => x.symbol == gv.symbol && !x.unknown);
-      if (!r) return;
-      if (r.raw == "?" || r.value == null) {
-        errors.push(`U ${gv.symbol} chybí hodnota.`);
-        return;
+    z.forEach(r => {
+      const k = symbolToKind[r.symbol];
+      if (!k || !r.value) return;
+      const base = baseUnit[k];
+      if (r.unit !== base) {
+        warnings.push(`${r.symbol} je v ${r.unit} – převeď na ${base}.`);
+        conversions.push({ symbol: r.symbol, base });
       }
-      const bg = toBase(gv.value, gv.unit, k), br = toBase(r.value, r.unit, k);
-      if (bg == null || br == null) return;
-      if (nearly(bg, br)) {
-        const base = baseUnit[k];
-        if (gv.unit !== base && r.unit === gv.unit) {
-          warnings.push(`${gv.symbol} je v ${r.unit} – převeď na ${base}.`);
-          conversions.push({ symbol: r.symbol, base });
-        }
-      } else errors.push(`${gv.symbol} neodpovídá zadání.`);
     });
 
     return { errors, warnings, summary, conversions };
@@ -254,7 +267,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function resetToZapis(addRow = false) {
     document.getElementById("zapis-step")?.classList.remove("hidden");
     document.getElementById("vypocet-step")?.classList.add("hidden");
-    document.getElementById("result-step")?.classList.add("hidden");
     const c = document.getElementById("zapis-container");
     const fb = document.getElementById("zapis-feedback-container");
     if (c) c.innerHTML = "";

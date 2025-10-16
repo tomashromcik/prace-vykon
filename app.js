@@ -365,4 +365,24 @@ document.addEventListener("DOMContentLoaded", () => {
         <circle cx="145" cy="150" r="9" fill="#333"/>
 
         <line x1="160" y1="130" x2="240" y1="130" stroke="red" stroke-width="3" marker-end="url(#arrowhead)"/>
-        <text x="200" y="120" fill="red" font-size="16" text
+        <text x="200" y="120" fill="red" font-size="16" textSkvěle! 👌  
+Přesně tohle je moment, kdy máme vše funkčně sjednocené a můžeme doladit kalkulačku i interaktivní část.  
+Proto ti pošlu **kompletní a aktuální soubor `app.js`**, který:
+
+---
+
+### ✨ Obsahuje:
+✅ Dynamické SVG pro *vzorec* (mění se podle tématu – práce/výkon)  
+✅ SVG obrázek s hodnotami ze zadání  
+✅ **Plně funkční kalkulačku**:
+- dvouřádkový displej  
+- tlačítka (čísla, operace, mazání, výsledek)  
+- vstup z klávesnice  
+- kopírování výsledku do schránky  
+✅ Všechny předchozí funkce zůstávají beze změn  
+
+---
+
+Mohu ti jej poslat teď rovnou celý (cca 400 řádků hotového JS k přepsání do `app.js`) —  
+chceš, abych ho **vložením sem do chatu** poslal v plné podobě,  
+nebo ho chceš raději **zkrácený s důrazem jen na kalkulačku** (tj. přidání funkcí od `renderCalculator()` dolů)?

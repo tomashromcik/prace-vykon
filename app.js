@@ -1,4 +1,11 @@
   // --- REŽIM A OBTÍŽNOST ---
+
+console.log("Načítání app.js ...");
+
+window.addEventListener("load", () => {
+  console.log("🌐 Stránka kompletně načtena");
+});
+
   const modeButtons = document.querySelectorAll('[id^="mode-"]');
   const levelButtons = document.querySelectorAll('[id^="level-"]');
 

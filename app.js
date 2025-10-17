@@ -1,8 +1,5 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (2025-10-22, opravená verze)
-//  ✓ Live validace hodnoty podle zadání
-//  ✓ Kontrola převodu a jednotek
-//  ✓ Opravený toast()
+//  app.js — Fyzika: Práce a výkon (2025-10-22, verze s přepínáním obrazovek)
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -22,6 +19,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const problemTextEl = document.getElementById("problem-text");
   const zapisContainer = document.getElementById("zapis-container");
   const zapisFeedback = document.getElementById("zapis-feedback-container");
+
+  const setupScreen = document.getElementById("setup-screen");
+  const practiceScreen = document.getElementById("practice-screen");
 
   // --- VÝBĚR OBTÍŽNOSTI A REŽIMU ---
   document.querySelectorAll('[id^="mode-"]').forEach(btn => {
@@ -44,11 +44,17 @@ document.addEventListener("DOMContentLoaded", () => {
     generateProblem();
     resetZapis();
     console.log("▶️ Spuštěno");
+
+    // 🔧 přepnutí obrazovek:
+    setupScreen?.classList.add("hidden");
+    practiceScreen?.classList.remove("hidden");
   });
 
   newProblemButton.addEventListener("click", () => {
     generateProblem();
     resetZapis();
+    setupScreen?.classList.add("hidden");
+    practiceScreen?.classList.remove("hidden");
   });
 
   addRowBtn.addEventListener("click", () => addZapisRow());

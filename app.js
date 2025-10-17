@@ -1,134 +1,145 @@
+
 /*
-  app_vypocet_final.js — stabilní verze
-  ✅ Zachována původní logika
-  ✅ Výpočetní část s dvoupólovými poli
+  app_vypocet_patch.js
+  Nekonfliktní doplněk výpočetní části:
+  - NIC NEMĚNÍ v existující logice aplikace
+  - pouze přidá dvoupólová pole (LHS = RHS) pro Vzorec / Dosazení / Výsledek
+  - hodnoty z nových polí zrcadlí do původních inputů (#formula-input, #substitution-input, #user-answer)
+  - volá existující live-validace, pokud jsou definované (formulaLiveValidate, substitutionLiveValidate, resultLiveValidate)
+  - resetuje se při „Nový příklad“ i po startu
 */
 
-console.log("Načítání app_vypocet_final.js ...");
+(function () {
+  const READY = () => document.readyState === "complete" || document.readyState === "interactive";
 
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("✅ DOM načten, inicializace aplikace...");
+  function $(id) { return document.getElementById(id); }
+  function on(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
 
-  // ===================== ÚVODNÍ NASTAVENÍ =====================
-  const setupScreen = document.getElementById("setup-screen");
-  const practiceScreen = document.getElementById("practice-screen");
-  const startButton = document.getElementById("start-button");
-  const topicSelect = document.getElementById("topic-select");
-  const newProblemButton = document.getElementById("new-problem-button");
-  const backButton = document.getElementById("back-button");
+  function buildTwoFieldRow(originalInput, opts) {
+    // Pokud chybí původní input nebo už existuje dvoupólová řádka, nic nedělej
+    if (!originalInput || document.getElementById(`tf-${opts.key}-lhs`)) return null;
 
-  let selectedMode = null;
-  let selectedLevel = null;
-  let selectedTopic = "prace";
-  let currentProblem = null;
+    // Skryj původní input (zůstává pro starou logiku/validaci)
+    originalInput.classList.add("hidden");
 
-  const modeButtons = document.querySelectorAll('[id^="mode-"]');
-  const levelButtons = document.querySelectorAll('[id^="level-"]');
+    // Kontejner (flex, aby šla šířka pravého vstupu natáhnout)
+    const row = document.createElement("div");
+    row.className = "flex items-center gap-2 mt-2";
 
-  function updateStartButtonState() {
-    if (selectedMode && selectedLevel && selectedTopic) {
-      startButton.disabled = false;
-      startButton.classList.remove("btn-disabled");
-    } else {
-      startButton.disabled = true;
-      startButton.classList.add("btn-disabled");
+    // Levý input (LHS) – krátký
+    const lhs = document.createElement("input");
+    lhs.type = "text";
+    lhs.id = `tf-${opts.key}-lhs`;
+    lhs.placeholder = opts.placeholderLHS || "";
+    lhs.className = "p-3 rounded-xl bg-gray-900 border border-gray-700 focus:ring-2 focus:ring-blue-500 w-20";
+
+    // "="
+    const eq = document.createElement("span");
+    eq.textContent = "=";
+    eq.className = "px-1 text-xl font-bold text-gray-300 select-none";
+
+    // Pravý input (RHS) – roztažitelný
+    const rhs = document.createElement("input");
+    rhs.type = "text";
+    rhs.id = `tf-${opts.key}-rhs`;
+    rhs.placeholder = opts.placeholderRHS || "";
+    rhs.className = "p-3 rounded-xl bg-gray-900 border border-gray-700 focus:ring-2 focus:ring-blue-500 flex-1";
+
+    // Vložení hned ZA původní input, aby rozložení nepadalo
+    originalInput.parentElement.insertBefore(row, originalInput.nextSibling);
+    row.appendChild(lhs);
+    row.appendChild(eq);
+    row.appendChild(rhs);
+
+    // Zrcadlení do původního inputu + live validace (pokud existují)
+    function mirror() {
+      const L = (lhs.value || "").trim();
+      const R = (rhs.value || "").trim();
+
+      if (opts.key === "result") {
+        // do #user-answer zapisujeme jen číselnou hodnotu z RHS
+        originalInput.value = R;
+        originalInput.dispatchEvent(new Event("input", { bubbles: true }));
+        if (typeof window.resultLiveValidate === "function") window.resultLiveValidate();
+      } else {
+        originalInput.value = (L && R) ? `${L} = ${R}` : "";
+        originalInput.dispatchEvent(new Event("input", { bubbles: true }));
+        if (opts.key === "formula" && typeof window.formulaLiveValidate === "function") window.formulaLiveValidate();
+        if (opts.key === "subs" && typeof window.substitutionLiveValidate === "function") window.substitutionLiveValidate();
+      }
+    }
+    on(lhs, "input", mirror);
+    on(rhs, "input", mirror);
+
+    // Reset placeholderů: není nic napevno, žák přepíše hodnoty
+    on(lhs, "focus", () => { if (lhs.value === "") lhs.placeholder = ""; });
+    on(rhs, "focus", () => { if (rhs.value === "") rhs.placeholder = ""; });
+
+    return { row, lhs, rhs };
+  }
+
+  function attachTwoFieldCalc() {
+    // Najdi původní inputy – NEPŘEJMENUJEME!
+    const formulaInput = $("formula-input");
+    const substitutionInput = $("substitution-input");
+    const userAnswerInput = $("user-answer");
+
+    // Vytvoř dvoupólové řádky (jen jednou)
+    buildTwoFieldRow(formulaInput, {
+      key: "formula",
+      placeholderLHS: "např. W",
+      placeholderRHS: "F * s"
+    });
+
+    buildTwoFieldRow(substitutionInput, {
+      key: "subs",
+      placeholderLHS: "např. W",
+      placeholderRHS: "např. 1000 * 2"
+    });
+
+    buildTwoFieldRow(userAnswerInput, {
+      key: "result",
+      placeholderLHS: "např. W",
+      placeholderRHS: "např. 2000"
+    });
+  }
+
+  function resetTwoFieldCalc() {
+    ["formula", "subs", "result"].forEach(key => {
+      const lhs = document.getElementById(`tf-${key}-lhs`);
+      const rhs = document.getElementById(`tf-${key}-rhs`);
+      if (lhs) lhs.value = "";
+      if (rhs) rhs.value = "";
+    });
+  }
+
+  function wireResets() {
+    // Reset na „Nový příklad“ (pokud existuje tlačítko)
+    const np = document.getElementById("new-problem-button");
+    on(np, "click", () => setTimeout(resetTwoFieldCalc, 0));
+
+    // Reset po startu
+    const start = document.getElementById("start-button");
+    on(start, "click", () => setTimeout(() => {
+      attachTwoFieldCalc();
+      resetTwoFieldCalc();
+    }, 0));
+
+    // Pokud app někde vyvolává vlastní událost, zachytíme ji
+    document.addEventListener("app:new-problem", resetTwoFieldCalc);
+  }
+
+  function initWhenReady() {
+    if (!READY()) return;
+    try {
+      attachTwoFieldCalc();
+      wireResets();
+      console.log("🧮 two-field calc patch attached.");
+    } catch (e) {
+      console.warn("[two-field-calc] init error:", e);
     }
   }
 
-  modeButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      modeButtons.forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
-      btn.classList.add("ring-2", "ring-blue-500");
-      selectedMode = btn.id.includes("practice") ? "practice" : "test";
-      console.log(`🎓 Režim zvolen: ${selectedMode}`);
-      updateStartButtonState();
-    });
-  });
-
-  levelButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      levelButtons.forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
-      btn.classList.add("ring-2", "ring-blue-500");
-      if (btn.id.includes("easy")) selectedLevel = "easy";
-      if (btn.id.includes("normal")) selectedLevel = "normal";
-      if (btn.id.includes("hard")) selectedLevel = "hard";
-      console.log(`🎯 Obtížnost zvolena: ${selectedLevel}`);
-      updateStartButtonState();
-    });
-  });
-
-  topicSelect?.addEventListener("change", e => {
-    selectedTopic = e.target.value;
-    updateStartButtonState();
-  });
-
-  startButton.addEventListener("click", () => {
-    console.log("▶️ Spuštěno");
-    setupScreen.classList.add("hidden");
-    practiceScreen.classList.remove("hidden");
-    generateNewProblem();
-  });
-
-  backButton.addEventListener("click", () => {
-    practiceScreen.classList.add("hidden");
-    setupScreen.classList.remove("hidden");
-  });
-
-  // ===================== GENERÁTOR PŘÍKLADŮ =====================
-  const problemText = document.getElementById("problem-text");
-  const unitSelect = document.getElementById("unit-select");
-
-  const topics = {
-    prace: {
-      units: ["J", "kJ"],
-      examples: [
-        { text: "Těleso bylo přesunuto silou 5 kN po dráze 2 m. Jaká práce byla vykonána?", givens: { F: 5000, s: 2 }, result: 10000 },
-        { text: "Auto jelo rovnoměrným přímočarým pohybem po dráze 5 km. Tahová síla motoru byla 1300 N.", givens: { F: 1300, s: 5000 }, result: 6500000 }
-      ]
-    }
-  };
-
-  function generateNewProblem() {
-    const data = topics[selectedTopic];
-    const example = data.examples[Math.floor(Math.random() * data.examples.length)];
-    currentProblem = example;
-    problemText.textContent = example.text;
-    console.log(`🆕 Nový příklad: ${example.text}`);
-  }
-
-  // ===================== VÝPOČETNÍ KROK =====================
-  const checkCalcBtn = document.getElementById("check-calculation-button");
-  const feedbackContainer = document.getElementById("vypocet-feedback-container");
-
-  // nová logika s dvoupólovými poli
-  const formulaInputLHS = document.createElement("input");
-  const formulaInputRHS = document.createElement("input");
-  formulaInputLHS.placeholder = "např. W";
-  formulaInputRHS.placeholder = "F * s";
-  [formulaInputLHS, formulaInputRHS].forEach(el => {
-    el.className = "w-full p-3 border rounded-xl bg-gray-900 border-gray-700 focus:ring-2 focus:ring-blue-500";
-  });
-
-  const formulaContainer = document.getElementById("formula-input").parentElement;
-  formulaContainer.innerHTML = "";
-  formulaContainer.appendChild(formulaInputLHS);
-  formulaContainer.insertAdjacentHTML("beforeend", '<span class="px-2 text-xl font-bold">=</span>');
-  formulaContainer.appendChild(formulaInputRHS);
-
-  checkCalcBtn?.addEventListener("click", () => {
-    const lhs = formulaInputLHS.value.trim();
-    const rhs = formulaInputRHS.value.trim();
-    if (!lhs || !rhs) {
-      feedbackContainer.innerHTML = `<div class='text-red-400'>❌ Vyplňte obě pole.</div>`;
-      return;
-    }
-    const expected = "W";
-    if (lhs !== expected) {
-      feedbackContainer.innerHTML = `<div class='text-yellow-400'>⚠️ Zkontrolujte, co počítáte (začněte hledanou veličinou).</div>`;
-      return;
-    }
-    feedbackContainer.innerHTML = `<div class='text-green-400'>✅ Správně! Pokračujte k dosazení.</div>`;
-  });
-
-  console.log("✅ Logika aplikace úspěšně načtena.");
-});
+  if (READY()) initWhenReady();
+  else document.addEventListener("DOMContentLoaded", initWhenReady);
+})();

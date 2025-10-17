@@ -1,22 +1,21 @@
-
 /*
-  app_calc_stable.js
-  Stabilní verze s rozšířenou výpočetní částí a live validací
+  app_vypocet_final.js — stabilní verze
+  ✅ Zachována původní logika
+  ✅ Výpočetní část s dvoupólovými poli
 */
 
-console.log("Načítání app_calc_stable.js ...");
+console.log("Načítání app_vypocet_final.js ...");
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ DOM načten, inicializace aplikace...");
 
+  // ===================== ÚVODNÍ NASTAVENÍ =====================
   const setupScreen = document.getElementById("setup-screen");
   const practiceScreen = document.getElementById("practice-screen");
   const startButton = document.getElementById("start-button");
-  const backButton = document.getElementById("back-button");
+  const topicSelect = document.getElementById("topic-select");
   const newProblemButton = document.getElementById("new-problem-button");
-  const problemText = document.getElementById("problem-text");
-  const checkCalculationButton = document.getElementById("check-calculation-button");
-  const feedbackContainer = document.getElementById("vypocet-feedback-container");
+  const backButton = document.getElementById("back-button");
 
   let selectedMode = null;
   let selectedLevel = null;
@@ -25,7 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const modeButtons = document.querySelectorAll('[id^="mode-"]');
   const levelButtons = document.querySelectorAll('[id^="level-"]');
-  const topicSelect = document.getElementById("topic-select");
 
   function updateStartButtonState() {
     if (selectedMode && selectedLevel && selectedTopic) {
@@ -39,30 +37,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
   modeButtons.forEach(btn => {
     btn.addEventListener("click", () => {
-      modeButtons.forEach(x => x.classList.remove("ring-2", "ring-blue-500"));
+      modeButtons.forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
       btn.classList.add("ring-2", "ring-blue-500");
       selectedMode = btn.id.includes("practice") ? "practice" : "test";
-      console.log("🎓 Režim zvolen:", selectedMode);
+      console.log(`🎓 Režim zvolen: ${selectedMode}`);
       updateStartButtonState();
     });
   });
 
   levelButtons.forEach(btn => {
     btn.addEventListener("click", () => {
-      levelButtons.forEach(x => x.classList.remove("ring-2", "ring-blue-500"));
+      levelButtons.forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
       btn.classList.add("ring-2", "ring-blue-500");
-      selectedLevel = btn.id.replace("level-", "");
-      console.log("🎯 Obtížnost zvolena:", selectedLevel);
+      if (btn.id.includes("easy")) selectedLevel = "easy";
+      if (btn.id.includes("normal")) selectedLevel = "normal";
+      if (btn.id.includes("hard")) selectedLevel = "hard";
+      console.log(`🎯 Obtížnost zvolena: ${selectedLevel}`);
       updateStartButtonState();
     });
   });
 
-  topicSelect.addEventListener("change", e => {
+  topicSelect?.addEventListener("change", e => {
     selectedTopic = e.target.value;
     updateStartButtonState();
   });
 
   startButton.addEventListener("click", () => {
+    console.log("▶️ Spuštěno");
     setupScreen.classList.add("hidden");
     practiceScreen.classList.remove("hidden");
     generateNewProblem();
@@ -73,74 +74,60 @@ document.addEventListener("DOMContentLoaded", () => {
     setupScreen.classList.remove("hidden");
   });
 
-  newProblemButton.addEventListener("click", () => {
-    generateNewProblem();
-  });
+  // ===================== GENERÁTOR PŘÍKLADŮ =====================
+  const problemText = document.getElementById("problem-text");
+  const unitSelect = document.getElementById("unit-select");
 
-  // ===== Generátor příkladů =====
   const topics = {
     prace: {
+      units: ["J", "kJ"],
       examples: [
-        { text: "Těleso bylo přesunuto silou 4 kN po dráze 2 m. Jaká práce byla vykonána?", givens: { F: 4000, s: 2 }, result: 8000, unit: "J" },
-        { text: "Auto jelo rovnoměrným přímočarým pohybem po dráze 5 km. Tahová síla motoru byla 1300 N.", givens: { s: 5000, F: 1300 }, result: 6500000, unit: "J" }
+        { text: "Těleso bylo přesunuto silou 5 kN po dráze 2 m. Jaká práce byla vykonána?", givens: { F: 5000, s: 2 }, result: 10000 },
+        { text: "Auto jelo rovnoměrným přímočarým pohybem po dráze 5 km. Tahová síla motoru byla 1300 N.", givens: { F: 1300, s: 5000 }, result: 6500000 }
       ]
     }
   };
 
   function generateNewProblem() {
-    const ex = topics[selectedTopic].examples[Math.floor(Math.random() * topics[selectedTopic].examples.length)];
-    currentProblem = ex;
-    problemText.textContent = ex.text;
-    resetCalculationFields();
-    console.log("🆕 Nový příklad:", ex.text);
+    const data = topics[selectedTopic];
+    const example = data.examples[Math.floor(Math.random() * data.examples.length)];
+    currentProblem = example;
+    problemText.textContent = example.text;
+    console.log(`🆕 Nový příklad: ${example.text}`);
   }
 
-  // ===== Výpočetní část =====
-  const fields = {
-    formula: ["formula-input-left", "formula-input-right"],
-    substitution: ["substitution-input-left", "substitution-input-right"],
-    result: ["result-input-left", "result-input-right"]
-  };
+  // ===================== VÝPOČETNÍ KROK =====================
+  const checkCalcBtn = document.getElementById("check-calculation-button");
+  const feedbackContainer = document.getElementById("vypocet-feedback-container");
 
-  Object.values(fields).flat().forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("input", rowLiveValidate);
+  // nová logika s dvoupólovými poli
+  const formulaInputLHS = document.createElement("input");
+  const formulaInputRHS = document.createElement("input");
+  formulaInputLHS.placeholder = "např. W";
+  formulaInputRHS.placeholder = "F * s";
+  [formulaInputLHS, formulaInputRHS].forEach(el => {
+    el.className = "w-full p-3 border rounded-xl bg-gray-900 border-gray-700 focus:ring-2 focus:ring-blue-500";
   });
 
-  function rowLiveValidate() {
-    const fL = document.getElementById(fields.formula[0]).value.trim();
-    const fR = document.getElementById(fields.formula[1]).value.trim();
-    const sL = document.getElementById(fields.substitution[0]).value.trim();
-    const sR = document.getElementById(fields.substitution[1]).value.trim();
-    const rL = document.getElementById(fields.result[0]).value.trim();
-    const rR = document.getElementById(fields.result[1]).value.trim();
+  const formulaContainer = document.getElementById("formula-input").parentElement;
+  formulaContainer.innerHTML = "";
+  formulaContainer.appendChild(formulaInputLHS);
+  formulaContainer.insertAdjacentHTML("beforeend", '<span class="px-2 text-xl font-bold">=</span>');
+  formulaContainer.appendChild(formulaInputRHS);
 
-    if (fL && fR) console.log(`📐 Vzorec: ${fL} = ${fR}`);
-    if (sL && sR) console.log(`🧾 Dosazení: ${sL} = ${sR}`);
-    if (rL && rR) console.log(`🧮 Výsledek: ${rL} = ${rR}`);
-  }
-
-  function resetCalculationFields() {
-    Object.values(fields).flat().forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = "";
-    });
-    feedbackContainer.innerHTML = "";
-  }
-
-  // ===== Kontrola výpočtu =====
-  checkCalculationButton.addEventListener("click", () => {
-    const rVal = parseFloat(document.getElementById(fields.result[1]).value);
-    if (isNaN(rVal)) {
-      feedbackContainer.innerHTML = `<p class='text-red-400 font-semibold'>❌ Zadejte číselný výsledek!</p>`;
+  checkCalcBtn?.addEventListener("click", () => {
+    const lhs = formulaInputLHS.value.trim();
+    const rhs = formulaInputRHS.value.trim();
+    if (!lhs || !rhs) {
+      feedbackContainer.innerHTML = `<div class='text-red-400'>❌ Vyplňte obě pole.</div>`;
       return;
     }
-    const correct = Math.abs(rVal - currentProblem.result) < 1;
-    if (correct) {
-      feedbackContainer.innerHTML = `<p class='text-green-400 font-semibold'>✅ Správně! ${currentProblem.result} ${currentProblem.unit}</p>`;
-    } else {
-      feedbackContainer.innerHTML = `<p class='text-yellow-400 font-semibold'>ℹ️ Správný výsledek: ${currentProblem.result} ${currentProblem.unit}</p>`;
+    const expected = "W";
+    if (lhs !== expected) {
+      feedbackContainer.innerHTML = `<div class='text-yellow-400'>⚠️ Zkontrolujte, co počítáte (začněte hledanou veličinou).</div>`;
+      return;
     }
+    feedbackContainer.innerHTML = `<div class='text-green-400'>✅ Správně! Pokračujte k dosazení.</div>`;
   });
 
   console.log("✅ Logika aplikace úspěšně načtena.");

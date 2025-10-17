@@ -799,5 +799,112 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => d.remove(), 5000);
   }
 
-  console.log("✅ Logika aplikace úspěšně načtena.");
+  
+  // ====== [ADDED] Dvoupólové řádky pro výpočty (LHS = RHS) se zrcadlením do původních polí ======
+  (function initTwoFieldCalc(){
+    try {
+      // Původní single-input prvky (ponechány kvůli původní logice)
+      const formulaInput = document.getElementById("formula-input");
+      const substitutionInput = document.getElementById("substitution-input");
+      const userAnswerInput = document.getElementById("user-answer");
+      const unitSelect = document.getElementById("unit-select");
+
+      // Pokud už byly vytvořeny, nespouštět znovu
+      if (document.getElementById("formula-lhs")) return;
+
+      // Pomocná funkce – vytvoří dvojici vstupů s rovnítkem a zrcadlením
+      function buildTwoFieldRow(whereEl, key, lhsDefault, rhsPlaceholder){
+        if (!whereEl) return null;
+        const row = document.createElement("div");
+        row.className = "grid grid-cols-1 sm:grid-cols-6 gap-2 items-center mt-2";
+
+        const lhs = document.createElement("input");
+        lhs.type = "text"; lhs.maxLength = 2; lhs.id = key+"-lhs";
+        lhs.placeholder = "W/F/s"; lhs.value = lhsDefault || "";
+        lhs.className = "p-2 rounded-md bg-gray-900 border border-gray-700 text-white w-16";
+
+        const eq = document.createElement("div");
+        eq.className = "flex items-center justify-center text-gray-300";
+        eq.textContent = "=";
+
+        const rhs = document.createElement("input");
+        rhs.type = "text"; rhs.id = key+"-rhs";
+        rhs.placeholder = rhsPlaceholder || "";
+        rhs.className = "p-2 rounded-md bg-gray-900 border border-gray-700 text-white";
+
+        row.append(lhs, eq, rhs);
+        whereEl.parentElement.insertBefore(row, whereEl.nextSibling);
+
+        // Zrcadlení hodnot do původních vstupů (aby původní validace/ověření zůstalo funkční)
+        function mirror(){
+          const L = (lhs.value || "").trim();
+          const R = (rhs.value || "").trim();
+          if (key === "formula" && formulaInput){
+            formulaInput.value = (L && R) ? (L + " = " + R) : "";
+            formulaInput.dispatchEvent(new Event("input", {bubbles:true}));
+          }
+          if (key === "subs" && substitutionInput){
+            substitutionInput.value = (L && R) ? (L + " = " + R) : "";
+            substitutionInput.dispatchEvent(new Event("input", {bubbles:true}));
+          }
+          if (key === "result" && userAnswerInput){
+            // do původního pole jde jen číselná hodnota (RHS)
+            userAnswerInput.value = R;
+            userAnswerInput.dispatchEvent(new Event("input", {bubbles:true}));
+          }
+        }
+        lhs.addEventListener("input", mirror);
+        rhs.addEventListener("input", mirror);
+
+        return {lhs, rhs, row};
+      }
+
+      // Najdi původní řádky
+      const formulaWrap = formulaInput ? formulaInput : null;
+      const subsWrap = substitutionInput ? substitutionInput : null;
+      // Výsledek – původně bylo input + select v řádku; vložíme dvoupólovou variantu těsně NAD něj
+      let resultAnchor = null;
+      if (userAnswerInput){
+        // typicky je userAnswerInput inside a flex with unit select
+        resultAnchor = userAnswerInput.closest("div") || userAnswerInput;
+      }
+
+      // Schovej původní single inputy (vizuálně), ponech hodnoty pro původní logiku
+      if (formulaInput) formulaInput.style.display = "none";
+      if (substitutionInput) substitutionInput.style.display = "none";
+      if (userAnswerInput) userAnswerInput.style.display = "none";
+
+      // Vytvoř tři dvoupólové řádky
+      const f = buildTwoFieldRow(formulaWrap, "formula", "W", "F * s");
+      const s = buildTwoFieldRow(subsWrap, "subs", "W", "např. 1000 * 2");
+      if (resultAnchor) {
+        // vlož nad blok s původním výsledkem
+        const holder = document.createElement("div");
+        holder.className = "mt-2";
+        resultAnchor.parentElement.insertBefore(holder, resultAnchor);
+        const r = buildTwoFieldRow(holder, "result", "W", "číslo");
+      }
+
+      // Reset při každém startu příkladu (pokud existuje funkce startNewProblem nebo ekvivalent)
+      const originalStart = window.startNewProblem;
+      window.startNewProblem = function(){
+        if (typeof originalStart === "function") originalStart();
+        const fl = document.getElementById("formula-lhs"); const fr = document.getElementById("formula-rhs");
+        const sl = document.getElementById("subs-lhs"); const sr = document.getElementById("subs-rhs");
+        const rl = document.getElementById("result-lhs"); const rr = document.getElementById("result-rhs");
+        if (fl) fl.value = "W"; if (fr) fr.value = "F * s";
+        if (sl) sl.value = "W"; if (sr) sr.value = "";
+        if (rl) rl.value = "W"; if (rr) rr.value = "";
+        // Promítnout do původních vstupů
+        if (fl && fr && formulaInput){ formulaInput.value = fl.value + " = " + fr.value; }
+        if (sl && sr && substitutionInput){ substitutionInput.value = sl.value + " = " + sr.value; }
+        if (rr && userAnswerInput){ userAnswerInput.value = rr.value; }
+      };
+
+    } catch(e){
+      console.warn("[two-field-calc] init error:", e);
+    }
+  })();
+  // ====== [/ADDED] ======
+console.log("✅ Logika aplikace úspěšně načtena.");
 });

@@ -1,5 +1,6 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (verze 2025-10-20)
+//  app.js — Fyzika: Práce a výkon (verze 2025-10-20, fix řádkové kontroly,
+//  auto-převodu a SVG trojúhelníku s „F · s“)
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -136,7 +137,14 @@ document.addEventListener("DOMContentLoaded", () => {
     cb.addEventListener("change", () => {
       val.value = cb.checked ? "?" : "";
       val.disabled = cb.checked;
+      // živá kontrola při změně checkboxu
+      rowLiveValidateAndMaybeConvert(row);
     });
+
+    // Živá kontrola: při změně kterékoli části řádku
+    sSel.addEventListener("change", () => rowLiveValidateAndMaybeConvert(row));
+    uSel.addEventListener("change", () => rowLiveValidateAndMaybeConvert(row));
+    val.addEventListener("input", () => rowLiveValidateAndMaybeConvert(row));
 
     row.append(sSel, val, uSel, lab);
     zapisContainer.appendChild(row);
@@ -171,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return i;
   }
 
-  // -------------------- VALIDACE --------------------
+  // -------------------- VALIDACE (mapy jednotek) --------------------
   const symbolToKind = { s:"length", W:"energy", F:"force", P:"power", m:"mass", t:"time" };
   const baseUnit = { length:"m", energy:"J", force:"N", power:"W", mass:"kg", time:"s" };
   const unitSets = {
@@ -183,11 +191,115 @@ document.addEventListener("DOMContentLoaded", () => {
     time:["s","min","h"]
   };
 
+  // převodní koeficienty -> na základní jednotku
+  const unitToBaseFactor = {
+    // délka
+    mm: 1/1000, cm: 1/100, m: 1, km: 1000,
+    // energie
+    J: 1, kJ: 1000, MJ: 1_000_000,
+    // síla
+    N: 1, kN: 1000, MN: 1_000_000,
+    // výkon
+    W: 1, kW: 1000, MW: 1_000_000,
+    // hmotnost
+    g: 1/1000, kg: 1, t: 1000,
+    // čas
+    s: 1, min: 60, h: 3600
+  };
+
+  function isRowComplete(row) {
+    const symbol = row.querySelector(".zapis-symbol").value;
+    const unit = row.querySelector(".zapis-unit").value;
+    const unknown = row.querySelector(".zapis-unknown").checked;
+    const raw = row.querySelector(".zapis-value").value.trim();
+    return symbol !== "-" && unit !== "-" && (unknown || raw !== "");
+  }
+
+  function rowLiveValidateAndMaybeConvert(row) {
+    // reset vizuálních stavů
+    row.classList.remove("ring-2", "ring-red-500", "ring-green-500");
+
+    if (!isRowComplete(row)) {
+      // Nevalidovat, dokud není kompletní (jak sis přál)
+      return;
+    }
+
+    const symbol = row.querySelector(".zapis-symbol").value;
+    const unit = row.querySelector(".zapis-unit").value;
+    const unknown = row.querySelector(".zapis-unknown").checked;
+    const raw = row.querySelector(".zapis-value").value.trim();
+
+    const kind = symbolToKind[symbol];
+    if (!kind) {
+      // např. když někdo zvolí "-" a pak doplní zbytek – nechat být
+      return;
+    }
+
+    // 1) kontrola shody veličina ↔ jednotka
+    if (!unitSets[kind].includes(unit)) {
+      row.classList.add("ring-2", "ring-red-500");
+      toast(`❌ ${symbol} neodpovídá jednotce ${unit}.`);
+      return;
+    }
+
+    // 2) pro známé hodnoty zkus číselnost
+    if (!unknown && raw !== "" && !isFinite(Number(raw))) {
+      row.classList.add("ring-2", "ring-red-500");
+      toast(`❌ ${symbol}: hodnota musí být číslo nebo zaškrtni "Hledaná veličina".`);
+      return;
+    }
+
+    row.classList.add("ring-2", "ring-green-500");
+
+    // 3) automatické nabídnutí řádku pro převod (pokud není v základní jednotce)
+    const base = baseUnit[kind];
+    if (!unknown && unit !== base) {
+      maybeAddBaseConversionRow(symbol, base);
+    }
+  }
+
+  function maybeAddBaseConversionRow(symbol, baseUnitCode) {
+    // zda už existuje řádek pro stejný symbol v základní jednotce
+    const rows = [...document.querySelectorAll(".zapis-row")];
+    const hasBase = rows.some(r =>
+      r.querySelector(".zapis-symbol")?.value === symbol &&
+      r.querySelector(".zapis-unit")?.value === baseUnitCode
+    );
+    if (hasBase) return;
+
+    // vlož nový řádek pro převod
+    addZapisRow(symbol, "", baseUnitCode, true);
+    toast(`ℹ️ Přidej převod: ${symbol} na ${baseUnitCode}.`);
+  }
+
+  function toast(msg) {
+    // jednoduchá nenáročná hláška do feedbacku (bez duplicit)
+    const p = document.createElement("div");
+    p.className = "text-sm text-yellow-300 mt-1";
+    p.textContent = msg;
+    zapisFeedback.appendChild(p);
+    // po 6s zmizí
+    setTimeout(() => p.remove(), 6000);
+  }
+
+  // -------------------- KONTROLA ZÁPISU (tlačítkem) --------------------
   checkZapisBtn?.addEventListener("click", () => {
     const rows = collect();
     const result = validateZapisFull(rows);
     renderSummary(mergedSummary(rows));
     renderIssues(result.errors);
+
+    // pokud jsou známé veličiny v násobcích (kN, km, ...), zajistí vložení řádku pro převod
+    rows.forEach(r => {
+      if (!r.symbol || r.symbol === "-" || r.unknown) return;
+      const kind = symbolToKind[r.symbol];
+      if (!kind) return;
+      const base = baseUnit[kind];
+      if (r.unit !== "-" && r.unit !== base) {
+        maybeAddBaseConversionRow(r.symbol, base);
+      }
+    });
+
     if (result.errors.length === 0) {
       zapisStep.classList.add("hidden");
       vypocetStep.classList.remove("hidden");
@@ -212,24 +324,33 @@ document.addEventListener("DOMContentLoaded", () => {
     if (rows.length === 0) errors.push("Zápis je prázdný.");
     const hasUnknown = rows.some(r => r.unknown);
     if (!hasUnknown) errors.push("Označ hledanou veličinu.");
+
     rows.forEach(r => {
+      if (!r.symbol || r.symbol === "-" || r.unit === "-") return;
       const k = symbolToKind[r.symbol];
       if (!k) return;
-      if (!unitSets[k].includes(r.unit))
+      if (!unitSets[k].includes(r.unit)) {
         errors.push(`Veličina ${r.symbol} neodpovídá jednotce ${r.unit}.`);
+      }
+      if (!r.unknown && r.raw !== "" && !isFinite(Number(r.raw))) {
+        errors.push(`Veličina ${r.symbol}: hodnota musí být číslo.`);
+      }
     });
     return { errors };
   }
 
+  // -------------------- SOUHRN (např. „F = 2 kN = 2000 N“) --------------------
   function mergedSummary(rows) {
-    const map = {};
+    // Poskládáme podle symbolů postupně tak, jak jsou seřazeny v zápisu
+    const order = [];
+    const bySym = {};
     rows.forEach(r => {
       if (!r.symbol || r.symbol === "-") return;
-      map[r.symbol] ??= [];
-      const part = r.unknown ? "? " + r.unit : `${r.raw} ${r.unit}`;
-      if (!map[r.symbol].includes(part)) map[r.symbol].push(part);
+      if (!bySym[r.symbol]) { bySym[r.symbol] = []; order.push(r.symbol); }
+      const part = r.unknown ? `? ${r.unit}` : `${r.raw} ${r.unit}`;
+      if (!bySym[r.symbol].includes(part)) bySym[r.symbol].push(part);
     });
-    return Object.entries(map).map(([s, vals]) => `${s} = ${vals.join(" = ")}`).join("\n");
+    return order.map(sym => `${sym} = ${bySym[sym].join(" = ")}`).join("\n");
   }
 
   function renderSummary(text) {
@@ -282,7 +403,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const btn = document.getElementById(btnId);
     if (btn) {
       btn.addEventListener("click", () => {
-        console.log(`🧩 Klik: ${btnId}`);
         if (btnId === "open-formula-button") renderFormulaTriangle();
         if (btnId === "open-diagram-button") renderDiagram();
         if (btnId === "open-help-button") renderHelp();
@@ -303,25 +423,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // -------------------- SVG VZOREC --------------------
+  // -------------------- SVG VZOREC (opravena příčka a „F · s“) --------------------
   function renderFormulaTriangle() {
     const c = document.getElementById("formula-svg-container");
-    let formulaSVG = selectedTopic === "vykon"
-      ? `<svg width="200" height="160" viewBox="0 0 200 160">
-          <polygon points="100,10 10,150 190,150" fill="none" stroke="white" stroke-width="2"/>
-          <line x1="45" y1="100" x2="155" y1="100" stroke="white" stroke-width="2"/>
-          <text x="100" y="60" fill="white" font-size="32" text-anchor="middle">P</text>
-          <text x="65" y="135" fill="white" font-size="28" text-anchor="middle">W</text>
-          <text x="135" y="135" fill="white" font-size="28" text-anchor="middle">t</text>
+    const svg = (selectedTopic === "vykon")
+      ? `
+        <svg width="220" height="170" viewBox="0 0 220 170">
+          <polygon points="110,12 20,158 200,158" fill="none" stroke="white" stroke-width="2"/>
+          <!-- příčka: jasně vodorovná mezi odvěsnami -->
+          <line x1="40" y1="102" x2="180" y2="102" stroke="white" stroke-width="2"/>
+          <text x="110" y="63" fill="white" font-size="34" text-anchor="middle">P</text>
+          <text x="72"  y="140" fill="white" font-size="28" text-anchor="middle">W</text>
+          <text x="148" y="140" fill="white" font-size="28" text-anchor="middle">t</text>
         </svg>`
-      : `<svg width="200" height="160" viewBox="0 0 200 160">
-          <polygon points="100,10 10,150 190,150" fill="none" stroke="white" stroke-width="2"/>
-          <line x1="45" y1="100" x2="155" y1="100" stroke="white" stroke-width="2"/>
-          <text x="100" y="60" fill="white" font-size="32" text-anchor="middle">W</text>
-          <text x="65" y="135" fill="white" font-size="28" text-anchor="middle">F</text>
-          <text x="135" y="135" fill="white" font-size="28" text-anchor="middle">s</text>
+      : `
+        <svg width="220" height="170" viewBox="0 0 220 170">
+          <polygon points="110,12 20,158 200,158" fill="none" stroke="white" stroke-width="2"/>
+          <!-- příčka: jasně vodorovná mezi odvěsnami -->
+          <line x1="40" y1="102" x2="180" y2="102" stroke="white" stroke-width="2"/>
+          <text x="110" y="63" fill="white" font-size="34" text-anchor="middle">W</text>
+          <text x="72"  y="140" fill="white" font-size="26" text-anchor="middle">F · s</text>
         </svg>`;
-    c.innerHTML = formulaSVG;
+    c.innerHTML = svg;
   }
 
   // -------------------- SVG OBRÁZEK --------------------
@@ -351,17 +474,6 @@ document.addEventListener("DOMContentLoaded", () => {
         <circle cx="145" cy="150" r="9" fill="#333"/>
         <line x1="160" y1="130" x2="240" y2="130" stroke="red" stroke-width="3" marker-end="url(#arrowhead)"/>
         <text x="200" y="120" fill="red" font-size="16" text-anchor="middle">F = ${F.value || "?"} ${F.unit || ""}</text>
-        <line x1="80" y1="165" x2="240" y2="165" stroke="orange" stroke-width="2" marker-end="url(#arrowhead2)"/>
-        <text x="160" y="180" fill="orange" font-size="14" text-anchor="middle">s = ${s.value || "?"} ${s.unit || ""}</text>
-      </svg>
-    `;
-Perfektní, tady je celá ověřená a opravená finální část `app.js` (navazuje přesně tam, kde se ti dříve kód přerušil) –  
-✅ bez chyby `Unexpected identifier 'app'`,  
-✅ obsahuje plně funkční SVG obrázek, kalkulačku, a všechny uzavírací závorky i ukončení dokumentu:
-
----
-
-```js
         <line x1="80" y1="165" x2="240" y2="165" stroke="orange" stroke-width="2" marker-end="url(#arrowhead2)"/>
         <text x="160" y="180" fill="orange" font-size="14" text-anchor="middle">s = ${s.value || "?"} ${s.unit || ""}</text>
       </svg>
@@ -436,7 +548,7 @@ Perfektní, tady je celá ověřená a opravená finální část `app.js` (nava
         <p>💡 <b>Tip:</b> Při řešení vždy vycházej z textu zadání.</p>
         <p>1️⃣ Vyber známé veličiny a doplň jejich hodnoty i jednotky.</p>
         <p>2️⃣ Označ <b>hledanou veličinu</b> pomocí checkboxu.</p>
-        <p>3️⃣ Pokud je hodnota v násobcích (např. kN, km), proveď převod na základní jednotku.</p>
+        <p>3️⃣ Pokud je hodnota v násobcích (např. kN, km), proveď převod na základní jednotku (automatický řádek se nabídne).</p>
       </div>`;
   }
 

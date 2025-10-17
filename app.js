@@ -479,28 +479,5 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(()=> t.remove(), 3500);
   }
 
-  
-  // -------------------- Modální okna (obrázek / vzorec / nápověda / kalkulačka) --------------------
-  (function wireModals(){
-    const pairs = [
-      ["open-diagram-button","diagram-modal","close-diagram-button"],
-      ["open-formula-button","formula-modal","close-formula-button"],
-      ["open-help-button","help-modal","close-help-button"],
-      ["open-calculator-button","calculator-modal","close-calculator-button"],
-    ];
-    pairs.forEach(([openId, modalId, closeId]) => {
-      const openBtn = document.getElementById(openId);
-      const modal = document.getElementById(modalId);
-      const closeBtn = document.getElementById(closeId);
-      if (!modal || !openBtn || !closeBtn) return;
-      const show = () => modal.classList.remove("hidden");
-      const hide = () => modal.classList.add("hidden");
-      openBtn.addEventListener("click", show);
-      closeBtn.addEventListener("click", hide);
-      modal.addEventListener("click", (e)=> { if (e.target === modal) hide(); });
-      document.addEventListener("keydown", (e)=> { if (e.key === "Escape") hide(); });
-    });
-  })();
-
   console.log("✅ Logika aplikace úspěšně načtena.");
 });

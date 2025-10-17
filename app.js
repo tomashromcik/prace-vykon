@@ -801,3 +801,83 @@ document.addEventListener("DOMContentLoaded", () => {
 
   console.log("✅ Logika aplikace úspěšně načtena.");
 });
+
+
+// =====================================================
+// 🧩 DOPLNĚNÍ: OPRAVA VÝSLEDKU A MODÁLNÍ HODNOCENÍ
+// =====================================================
+
+document.addEventListener("DOMContentLoaded", () => {
+  // vytvoření modálního okna pro hodnocení
+  if (!document.getElementById("result-modal")) {
+    const modal = document.createElement("div");
+    modal.id = "result-modal";
+    modal.className = "hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4";
+    modal.innerHTML = `
+      <div class='bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-2xl space-y-4 relative text-center'>
+        <button id='close-result-modal' class='absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none'>&times;</button>
+        <h3 class='text-xl font-semibold text-white mb-4'>📊 Shrnutí a hodnocení</h3>
+        <div id='result-content' class='text-gray-200 text-left space-y-3 text-sm leading-relaxed'></div>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById("close-result-modal").onclick = () =>
+      modal.classList.add("hidden");
+  }
+
+  // přepis akce kontroly výpočtu
+  const oldCheck = document.getElementById("check-calculation-button");
+  if (oldCheck) {
+    oldCheck.addEventListener("click", (e) => {
+      e.preventDefault();
+      const modal = document.getElementById("result-modal");
+      const content = document.getElementById("result-content");
+      const formula = document.getElementById("formula-input").value.trim();
+      const substitution = document.getElementById("substitution-input").value.trim();
+      const answer = document.getElementById("user-answer").value.trim();
+      const unit = document.getElementById("unit-select").value;
+
+      const symbol = (function() {
+        const r = [...document.querySelectorAll(".zapis-row")].find(x => x.querySelector(".zapis-unknown")?.checked);
+        const s = r?.querySelector(".zapis-symbol")?.value;
+        return s && s !== "-" ? s : "W";
+      })();
+
+      // kontrola formátu výsledku (musí začínat symbolem hledané veličiny)
+      let answerCheck = "";
+      if (!answer.startsWith(symbol + "=")) {
+        answerCheck = `⚠️ Výsledek by měl začínat hledanou veličinou (např. <b>${symbol}=...</b>).`;
+      }
+
+      const summaryZapis = [...document.querySelectorAll(".zapis-row")].map(r => {
+        const s = r.querySelector(".zapis-symbol").value;
+        const v = r.querySelector(".zapis-value").value.trim();
+        const u = r.querySelector(".zapis-unit").value;
+        return `${s} = ${v} ${u}`;
+      }).join("<br>");
+
+      content.innerHTML = `
+        <div class='bg-gray-900 border border-gray-700 rounded p-3'>
+          <b>Zadání:</b><br>${document.getElementById("problem-text").textContent}
+        </div>
+        <div class='bg-gray-900 border border-gray-700 rounded p-3'>
+          <b>Zápis:</b><br>${summaryZapis}
+        </div>
+        <div class='bg-gray-900 border border-gray-700 rounded p-3'>
+          <b>Vzorec:</b> ${formula}<br>
+          <b>Dosazení:</b> ${substitution}<br>
+          <b>Výsledek:</b> ${answer} ${unit}<br>
+          ${answerCheck ? "<div class='text-yellow-400 mt-2'>" + answerCheck + "</div>" : ""}
+        </div>
+        <div class='bg-gray-900 border border-gray-700 rounded p-3'>
+          <b>Hodnocení:</b><br>
+          <ul class='list-disc pl-4 text-sm text-gray-300'>
+            <li>${answerCheck ? "Dbej na formát zápisu výsledku." : "✅ Výsledek formálně správný."}</li>
+            <li>Porovnej výsledek s očekávaným a zkontroluj jednotky.</li>
+            <li>Pokud se výsledek liší, zkus projít převody a dosazení.</li>
+          </ul>
+        </div>
+      `;
+      modal.classList.remove("hidden");
+    });
+  }
+});

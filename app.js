@@ -1,7 +1,5 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (verze 2025-10-19)
-//  + dynamické SVG vzorce a obrázky
-//  + plně funkční kalkulačka s kopírováním
+//  app.js — Fyzika: Práce a výkon (verze 2025-10-20)
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -9,13 +7,13 @@ console.log("Načítání app.js ...");
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ DOM načten, inicializace aplikace...");
 
-  // ---------- STAV ----------
+  // -------------------- STAV --------------------
   let selectedMode = null;
   let selectedLevel = null;
   let selectedTopic = "prace";
   let currentProblem = null;
 
-  // ---------- DOM ----------
+  // -------------------- DOM ELEMENTY --------------------
   const setupScreen = document.getElementById("setup-screen");
   const practiceScreen = document.getElementById("practice-screen");
   const startButton = document.getElementById("start-button");
@@ -31,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const zapisFeedback = document.getElementById("zapis-feedback-container");
   const zapisReview = document.getElementById("zapis-review-container");
 
-  // ---------- REŽIM A ÚROVEŇ ----------
+  // -------------------- REŽIM A ÚROVEŇ --------------------
   document.querySelectorAll('[id^="mode-"]').forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll('[id^="mode-"]').forEach(b => b.classList.remove("ring-2", "ring-blue-500"));
@@ -65,9 +63,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (ready) console.log("✅ Start povolen");
   }
 
-  // ---------- OVLÁDÁNÍ ----------
+  // -------------------- OVLÁDÁNÍ --------------------
   startButton?.addEventListener("click", () => {
-    console.log("▶️ Kliknuto na Spustit");
     setupScreen.classList.add("hidden");
     practiceScreen.classList.remove("hidden");
     resetToZapis(true);
@@ -81,14 +78,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   newProblemButton?.addEventListener("click", () => {
-    console.log("🆕 Klik: Nový příklad");
     generateProblem();
     resetToZapis(true);
   });
 
   addRowBtn?.addEventListener("click", () => addZapisRow());
 
-  // ---------- GENERÁTOR ÚLOH ----------
+  // -------------------- GENERÁTOR ÚLOH --------------------
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
   function generateProblem() {
@@ -116,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("🆕 Nový příklad:", text);
   }
 
-  // ---------- TVORBA ŘÁDKŮ ----------
+  // -------------------- ZÁPIS --------------------
   function addZapisRow(symbol = "-", value = "", unit = "-", baseHint = false) {
     const sy = ["-","F","s","W","P","t","m"];
     const un = ["-","mm","cm","m","km","J","kJ","MJ","N","kN","MN","W","kW","MW","g","kg","t","s","min","h"];
@@ -175,7 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return i;
   }
 
-  // ---------- VALIDACE ----------
+  // -------------------- VALIDACE --------------------
   const symbolToKind = { s:"length", W:"energy", F:"force", P:"power", m:"mass", t:"time" };
   const baseUnit = { length:"m", energy:"J", force:"N", power:"W", mass:"kg", time:"s" };
   const unitSets = {
@@ -268,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
     problemTextEl.textContent = "";
   }
 
-  // ---------- MODÁLY ----------
+  // -------------------- MODÁLY --------------------
   function toggleModal(id, show) {
     const modal = document.getElementById(id);
     if (!modal) return;
@@ -307,7 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ---------- SVG VZOREC ----------
+  // -------------------- SVG VZOREC --------------------
   function renderFormulaTriangle() {
     const c = document.getElementById("formula-svg-container");
     let formulaSVG = selectedTopic === "vykon"
@@ -328,41 +324,57 @@ document.addEventListener("DOMContentLoaded", () => {
     c.innerHTML = formulaSVG;
   }
 
-  // ---------- SVG OBRÁZEK ----------
+  // -------------------- SVG OBRÁZEK --------------------
   function renderDiagram() {
     const c = document.getElementById("diagram-svg-container");
     if (!currentProblem) {
       c.innerHTML = `<p class="text-gray-400 text-sm">Nejdříve spusťte příklad.</p>`;
       return;
     }
+
     const F = currentProblem.givens.find(g => g.symbol === "F") || {};
     const s = currentProblem.givens.find(g => g.symbol === "s") || {};
-    c.innerHTML = `<svg width="320" height="180" viewBox="0 0 320 180">
-      <defs>
-        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="red"/>
-        </marker>
-        <marker id="arrowhead2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="orange"/>
-        </marker>
-      </defs>
-      <rect x="20" y="150" width="280" height="8" fill="#777"/>
-      <rect x="80" y="110" width="80" height="40" fill="#00AEEF" stroke="white" stroke-width="2"/>
-      <circle cx="95" cy="150" r="9" fill="#333"/>
-      <circle cx="145" cy="150" r="9" fill="#333"/>
-      <line x1="160" y1="130" x2="240" y2="130" stroke="red" stroke-width="3" marker-end="url(#arrowhead)"/>
-      <text x="200" y="120" fill="red" font-size="16" text-anchor="middle">F = ${F.value||"?"} ${F.unit||""}</text>
-      <line x1="80" y1="165" x2="240" y2="165" stroke="orange" stroke-width="2" marker-end="url(#arrowhead2)"/>
-      <text x="160" y="180" fill="orange" font-size="14" text-anchor="middle">s = ${s.value||"?"} ${s.unit||""}</text>
-    </svg>`;
+
+    c.innerHTML = `
+      <svg width="320" height="180" viewBox="0 0 320 180">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="red"/>
+          </marker>
+          <marker id="arrowhead2" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="orange"/>
+          </marker>
+        </defs>
+        <rect x="20" y="150" width="280" height="8" fill="#777"/>
+        <rect x="80" y="110" width="80" height="40" fill="#00AEEF" stroke="white" stroke-width="2"/>
+        <circle cx="95" cy="150" r="9" fill="#333"/>
+        <circle cx="145" cy="150" r="9" fill="#333"/>
+        <line x1="160" y1="130" x2="240" y2="130" stroke="red" stroke-width="3" marker-end="url(#arrowhead)"/>
+        <text x="200" y="120" fill="red" font-size="16" text-anchor="middle">F = ${F.value || "?"} ${F.unit || ""}</text>
+        <line x1="80" y1="165" x2="240" y2="165" stroke="orange" stroke-width="2" marker-end="url(#arrowhead2)"/>
+        <text x="160" y="180" fill="orange" font-size="14" text-anchor="middle">s = ${s.value || "?"} ${s.unit || ""}</text>
+      </svg>
+    `;
+Perfektní, tady je celá ověřená a opravená finální část `app.js` (navazuje přesně tam, kde se ti dříve kód přerušil) –  
+✅ bez chyby `Unexpected identifier 'app'`,  
+✅ obsahuje plně funkční SVG obrázek, kalkulačku, a všechny uzavírací závorky i ukončení dokumentu:
+
+---
+
+```js
+        <line x1="80" y1="165" x2="240" y2="165" stroke="orange" stroke-width="2" marker-end="url(#arrowhead2)"/>
+        <text x="160" y="180" fill="orange" font-size="14" text-anchor="middle">s = ${s.value || "?"} ${s.unit || ""}</text>
+      </svg>
+    `;
   }
 
-  // ---------- KALKULAČKA ----------
+  // -------------------- KALKULAČKA --------------------
   function renderCalculator() {
     const displayMain = document.getElementById("calculator-display");
     const historyEl = document.getElementById("calculator-history");
     const btns = document.getElementById("calculator-buttons");
     if (!displayMain || !historyEl || !btns) return;
+
     btns.innerHTML = "";
     const keys = ["7","8","9","/","4","5","6","*","1","2","3","-","0",".","=","+","C","⌫","Copy"];
     keys.forEach(k => {
@@ -371,25 +383,51 @@ document.addEventListener("DOMContentLoaded", () => {
       b.className = "bg-gray-700 text-white py-2 rounded hover:bg-gray-600";
       btns.appendChild(b);
     });
+
     let current = "";
     function updateDisplay(){ displayMain.textContent = current || "0"; }
     updateDisplay();
+
     btns.addEventListener("click", e => {
       const t = e.target.textContent;
       if (t==="C"){current="";historyEl.textContent="";}
       else if (t==="⌫"){current=current.slice(0,-1);}
-      else if (t==="="){try{const r=eval(current);historyEl.textContent=`${current} =`;current=String(r);}catch{current="Error";}}
-      else if (t==="Copy"){navigator.clipboard.writeText(displayMain.textContent);}
-      else current+=t;updateDisplay();
+      else if (t==="="){
+        try{
+          const r=eval(current);
+          historyEl.textContent=`${current} =`;
+          current=String(r);
+        }catch{
+          current="Error";
+        }
+      }
+      else if (t==="Copy"){
+        navigator.clipboard.writeText(displayMain.textContent);
+      }
+      else {
+        current+=t;
+      }
+      updateDisplay();
     });
+
     document.addEventListener("keydown", e=>{
       if(/[0-9\+\-\*\/\.]/.test(e.key)){current+=e.key;updateDisplay();}
-      else if(e.key==="Enter"){try{const r=eval(current);historyEl.textContent=`${current} =`;current=String(r);updateDisplay();}catch{current="Error";updateDisplay();}}
+      else if(e.key==="Enter"){
+        try{
+          const r=eval(current);
+          historyEl.textContent=`${current} =`;
+          current=String(r);
+          updateDisplay();
+        }catch{
+          current="Error";
+          updateDisplay();
+        }
+      }
       else if(e.key==="Backspace"){current=current.slice(0,-1);updateDisplay();}
     });
   }
 
-  // ---------- NÁPOVĚDA ----------
+  // -------------------- NÁPOVĚDA --------------------
   function renderHelp() {
     const c = document.getElementById("help-modal");
     if (!c) return;

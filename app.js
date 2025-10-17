@@ -922,7 +922,7 @@ console.log("✅ Logika aplikace úspěšně načtena.");
 
   function buildTwoFieldRow(originalInput, opts) {
     if (!originalInput || document.getElementById(`tf-${opts.key}-lhs`)) return null;
-    originalInput.classList.add("hidden");
+    originalInput.style.display = "none";
 
     const row = document.createElement("div");
     row.className = "flex items-center gap-2 mt-2";

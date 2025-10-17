@@ -1,9 +1,9 @@
 // ====================================================================
-//  app.js — Fyzika: Práce a výkon (výpočetní část + live validace)
-//  - Aktivní volby, přepínání obrazovek, funkční modály
-//  - Zápis: live validace proti zadání + převody (±5 % tolerance)
-//  - Výpočet: live validace vzorce, dosazení, výsledku; komutativita pro W=F*s
-//  - Kontrola: souhrn zadání, zápisu, výpočtu a slovní hodnocení
+//  app.js — Fyzika: Práce a výkon (výpočetní část upravena na LHS = RHS)
+//  - Zachován funkční ZÁPIS (beze změn)
+//  - VE VÝPOČTU tři řádky s dvojicí polí: (LHS) = (RHS)
+//  - Live validace a modální shrnutí zachováno přes synchronizaci
+//    s původními poli: #formula-input, #substitution-input, #user-answer
 // ====================================================================
 
 console.log("Načítání app.js ...");
@@ -58,6 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const addRowBtn = document.getElementById("add-zapis-row-button");
   const checkZapisBtn = document.getElementById("check-zapis-button");
 
+  // Výpočet – původní single input prvky (ponechány kvůli validacím/modálu)
   const unitSelect = document.getElementById("unit-select");
   const checkCalcBtn = document.getElementById("check-calculation-button");
   const vypocetFeedback = document.getElementById("vypocet-feedback-container");
@@ -188,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // -------------------- ZÁPIS: UI ŘÁDEK --------------------
+  // -------------------- ZÁPIS (ponechán BEZE ZMĚNY) --------------------
   function addZapisRow(symbol = "-", value = "", unit = "-", baseHint = false) {
     const symbols = ["-","F","s","W"];
     const units = ["-","mm","cm","m","km","J","kJ","MJ","N","kN","MN"];
@@ -252,7 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return i;
   }
 
-  // -------------------- Jednotky / převody --------------------
   const symbolToKind = { s:"length", F:"force", W:"energy" };
   const baseUnit    = { length:"m", force:"N", energy:"J" };
   const unitSets = {
@@ -278,7 +278,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return Math.abs(a - b) <= Math.abs(b) * rel;
   }
 
-  // -------------------- Live validace řádku (ZÁPIS) --------------------
   function rowLiveValidate(row) {
     row.classList.remove("ring-2","ring-red-500","ring-green-500");
     const symbol  = row.querySelector(".zapis-symbol").value;
@@ -286,7 +285,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const unknown = row.querySelector(".zapis-unknown").checked;
     const rawStr  = row.querySelector(".zapis-value").value.trim();
 
-    // validovat až když je řádek vyplněný
     if (symbol === "-" || unit === "-" || (!unknown && rawStr === "")) return;
     const kind = symbolToKind[symbol];
     if (!kind) return;
@@ -343,19 +341,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function getUnknownSymbolFromZapis() {
     const r = [...document.querySelectorAll(".zapis-row")].find(x => x.querySelector(".zapis-unknown")?.checked);
     const sym = r?.querySelector(".zapis-symbol")?.value;
-    return (sym && sym !== "-") ? sym : "W"; // default W
-    }
+    return (sym && sym !== "-") ? sym : "W";
+  }
 
-  // -------------------- Kontrola zápisu → přechod do výpočtu --------------------
   checkZapisBtn?.addEventListener("click", () => {
     if (!currentProblem) return;
     const rows = collectRows();
-    // musí existovat hledaná veličina
     if (!rows.some(r => r.unknown)) {
       toast("⚠️ Označ hledanou veličinu.");
       return;
     }
-    // každá daná veličina ze zadání musí být zapsána a správná
     const errs = [];
     for (const g of currentProblem.givens) {
       const r = rows.find(x => x.symbol === g.symbol && !x.unknown && x.unit !== "-" && x.raw !== "");
@@ -370,7 +365,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (errs.length) { renderIssues(errs); return; }
 
-    // souhrn a přechod
     const summary = mergedSummary(rows);
     zapisReview.innerHTML = `
       <div class="p-3 bg-gray-900 border border-gray-700 rounded">
@@ -380,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
     zapisStep.classList.add("hidden");
     vypocetStep.classList.remove("hidden");
 
-    // připrav live validace výpočtu
+    // live validace výpočtu
     formulaLiveValidate();
     substitutionLiveValidate();
     resultLiveValidate();
@@ -423,6 +417,9 @@ document.addEventListener("DOMContentLoaded", () => {
     userAnswerInput.value = "";
     vypocetFeedback.innerHTML = "";
     if (addFirstRow) addZapisRow();
+
+    // připrav dual-rows UI pro výpočet (a skryj původní inputy)
+    initDualCalcRows();
   }
 
   function clearPractice() {
@@ -562,7 +559,116 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // -------------------- VÝPOČET: Live validace --------------------
+  // -------------------- VÝPOČET: DVOU-POLE (LHS = RHS) --------------------
+  // Původní single inputy zůstávají "zdrojem pravdy" pro validace a modál.
+  // Nová UI (LHS/RHS) je s nimi obousměrně synchronizována.
+
+  function initDualCalcRows() {
+    const checkBtn = checkCalcBtn;
+    if (!checkBtn) return;
+
+    // Skryj původní single-input řádky (jen vizuálně, logika je používá dál)
+    [formulaInput, substitutionInput, userAnswerInput].forEach(el => {
+      if (el) el.closest("div")?.classList.add("hidden");
+    });
+
+    // Pokud už existují wrappery, nemaž je – pouze je resetuj (aby nedocházelo k duplikaci)
+    const old = document.getElementById("dual-calc-wrapper");
+    if (old) old.remove();
+
+    const wrapper = document.createElement("div");
+    wrapper.id = "dual-calc-wrapper";
+    wrapper.className = "space-y-4 mb-2";
+
+    // 1) VZOREC
+    wrapper.appendChild(makeDualRow({
+      key: "formula",
+      label: "Vzorec",
+      lhsDefault: "W",
+      rhsDefault: "F * s",
+      onSync: (lhs, rhs) => {
+        if (formulaInput) {
+          formulaInput.value = `${lhs} = ${rhs}`;
+          formulaLiveValidate();
+        }
+      }
+    }));
+
+    // 2) DOSAZENÍ
+    wrapper.appendChild(makeDualRow({
+      key: "substitution",
+      label: "Dosazení",
+      lhsDefault: "W",
+      rhsDefault: "",
+      onSync: (lhs, rhs) => {
+        if (substitutionInput) {
+          substitutionInput.value = `${lhs} = ${rhs}`;
+          substitutionLiveValidate();
+        }
+      }
+    }));
+
+    // 3) VÝSLEDEK
+    wrapper.appendChild(makeDualRow({
+      key: "result",
+      label: "Výsledek",
+      lhsDefault: "W",
+      rhsDefault: "",
+      rhsType: "number",
+      onSync: (lhs, rhs) => {
+        // userAnswer je jen číslo (RHS); LHS se zobrazuje v poli vlevo
+        if (userAnswerInput) {
+          userAnswerInput.value = rhs;
+          resultLiveValidate();
+        }
+      }
+    }));
+
+    // Umístění wrapperu těsně PŘED tlačítko "Ověřit výpočet"
+    checkBtn.parentNode.insertBefore(wrapper, checkBtn);
+  }
+
+  function makeDualRow({ key, label, lhsDefault, rhsDefault, rhsType="text", onSync }) {
+    const wrap = document.createElement("div");
+    const lab = document.createElement("label");
+    lab.className = "block text-sm text-gray-400";
+    lab.textContent = `${label}:`;
+    wrap.appendChild(lab);
+
+    const row = document.createElement("div");
+    row.className = "grid grid-cols-1 sm:grid-cols-6 gap-2 items-center";
+
+    const lhs = document.createElement("input");
+    lhs.type = "text"; lhs.maxLength = 2;
+    lhs.placeholder = "W/F/s";
+    lhs.className = "p-2 rounded-md bg-gray-900 border border-gray-700 text-white w-16";
+    lhs.value = lhsDefault;
+    lhs.id = `${key}-lhs`;
+
+    const eq = document.createElement("div");
+    eq.className = "flex items-center justify-center text-gray-300";
+    eq.textContent = "=";
+
+    const rhs = document.createElement("input");
+    rhs.type = rhsType;
+    rhs.placeholder = (key==="formula") ? "F * s" : (key==="substitution" ? "1000 * 2" : "Číslo");
+    rhs.className = "p-2 rounded-md bg-gray-900 border border-gray-700 text-white";
+    rhs.value = rhsDefault;
+    rhs.id = `${key}-rhs`;
+
+    row.append(lhs, eq, rhs);
+    wrap.appendChild(row);
+
+    const sync = () => onSync?.(lhs.value.trim(), rhs.value.trim());
+    lhs.addEventListener("input", sync);
+    rhs.addEventListener("input", sync);
+    // úvodní sync
+    sync();
+
+    return wrap;
+  }
+
+  // -------------------- VÝPOČET: Live validace (používá původní inputy) --------------------
   formulaInput?.addEventListener("input", formulaLiveValidate);
   substitutionInput?.addEventListener("input", substitutionLiveValidate);
   userAnswerInput?.addEventListener("input", resultLiveValidate);
@@ -597,7 +703,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const sg = currentProblem?.givens.find(g=>g.symbol==="s");
     const Wval = currentProblem?.result;
 
-    // toleranční porovnání dvou čísel bez ohledu na pořadí
     const num = (s) => parseNum(s);
     const pairOK = (a,b,x,y) => (almostEqual(a,x) && almostEqual(b,y)) || (almostEqual(a,y) && almostEqual(b,x));
 
@@ -605,14 +710,12 @@ document.addEventListener("DOMContentLoaded", () => {
     let orderNote = "";
 
     if (unknown === "W") {
-      // očekáváme: W = F * s (komutativně)
       const m = txt.match(/^W=(\d+(?:[.,]\d+)?)\*(\d+(?:[.,]\d+)?)$/);
       if (m && Fg && sg) {
         const a = num(m[1]), b = num(m[2]);
         if (isFinite(a) && isFinite(b)) {
           ok = pairOK(a,b,Fg.value,sg.value);
-          // zkontroluj pořadí vůči vzorci, pokud byl zadán ve formátu W=F*s
-          if (/^W\s*=\s*F\s*[*·]\s*s$/i.test(formulaInput.value)) {
+          if (/^W\s*=\s*F\s*[*·]\s*s$/i.test((document.getElementById("formula-input")?.value||""))) {
             if (!(almostEqual(a,Fg.value) && almostEqual(b,sg.value))) {
               orderNote = "ℹ️ Pořadí dosazení by mělo odpovídat vzorci (F pak s).";
             }
@@ -620,22 +723,16 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     } else if (unknown === "F") {
-      // F = W / s
       const m = txt.match(/^F=(\d+(?:[.,]\d+)?)\/(\d+(?:[.,]\d+)?)$/);
       if (m && sg && isFinite(Wval)) {
         const a = num(m[1]), b = num(m[2]);
-        if (isFinite(a) && isFinite(b)) {
-          ok = almostEqual(a,Wval) && almostEqual(b,sg.value);
-        }
+        if (isFinite(a) && isFinite(b)) ok = almostEqual(a,Wval) && almostEqual(b,sg.value);
       }
     } else if (unknown === "s") {
-      // s = W / F
       const m = txt.match(/^s=(\d+(?:[.,]\d+)?)\/(\d+(?:[.,]\d+)?)$/);
       if (m && Fg && isFinite(Wval)) {
         const a = num(m[1]), b = num(m[2]);
-        if (isFinite(a) && isFinite(b)) {
-          ok = almostEqual(a,Wval) && almostEqual(b,Fg.value);
-        }
+        if (isFinite(a) && isFinite(b)) ok = almostEqual(a,Wval) && almostEqual(b,Fg.value);
       }
     }
 
@@ -664,7 +761,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const ok = almostEqual(inJ, currentProblem.result);
       userAnswerInput.classList.add("ring-2", ok ? "ring-green-500" : "ring-red-500");
     } else {
-      // jiné neřešíme v aktuálních úlohách – jen formální OK
       userAnswerInput.classList.add("ring-2","ring-green-500");
     }
   }
@@ -708,15 +804,11 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (unknown === "F" && sg) {
       const Wv = currentProblem?.result;
       const m = sTxt.replace(/\s+/g,"").match(/^F=(\d+(?:[.,]\d+)?)\/(\d+(?:[.,]\d+)?)$/);
-      if (m && isFinite(Wv)) {
-        substOK = almostEqual(num(m[1]), Wv) && almostEqual(num(m[2]), sg.value);
-      }
+      if (m && isFinite(Wv)) substOK = almostEqual(num(m[1]), Wv) && almostEqual(num(m[2]), sg.value);
     } else if (unknown === "s" && Fg) {
       const Wv = currentProblem?.result;
       const m = sTxt.replace(/\s+/g,"").match(/^s=(\d+(?:[.,]\d+)?)\/(\d+(?:[.,]\d+)?)$/);
-      if (m && isFinite(Wv)) {
-        substOK = almostEqual(num(m[1]), Wv) && almostEqual(num(m[2]), Fg.value);
-      }
+      if (m && isFinite(Wv)) substOK = almostEqual(num(m[1]), Wv) && almostEqual(num(m[2]), Fg.value);
     }
 
     // 3) zhodnocení výsledku
@@ -728,7 +820,6 @@ document.addEventListener("DOMContentLoaded", () => {
       resultOK = isFinite(resVal) && almostEqual(inJ, currentProblem.result);
       if (!isFinite(resVal)) resultNote = "❌ Výsledek musí být číslo.";
     } else {
-      // mimo rozsah současných úloh
       resultOK = isFinite(resVal);
     }
 
@@ -743,7 +834,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (substOrderNote) finalMsg.push(substOrderNote);
 
     if (resultOK) finalMsg.push("✅ Výsledek vypočten správně.");
-    else finalMsg.push("❌ Výsledek neodpovídá. Zkus projít kroky znovu.");
+    else finalMsg.push("❌ Výsledek neodpovídá. Zkus projít kroky znovu." + (resultNote ? " " + resultNote : ""));
 
     const html = `
       <div class="space-y-4">
@@ -760,8 +851,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="p-3 bg-gray-900 border border-gray-700 rounded">
           <div class="font-semibold text-gray-300 mb-1">Tvoje řešení:</div>
           <div class="text-gray-200 text-sm">
-            <div><b>Vzorec:</b> ${escapeHtml(fTxt)}</div>
-            <div><b>Dosazení:</b> ${escapeHtml(sTxt)}</div>
+            <div><b>Vzorec:</b> ${escapeHtml((formulaInput.value||""))}</div>
+            <div><b>Dosazení:</b> ${escapeHtml((substitutionInput.value||""))}</div>
             <div><b>Výsledek:</b> ${isFinite(resVal) ? resVal : "—"} ${resUnit}</div>
           </div>
         </div>
@@ -779,9 +870,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // -------------------- POMOCNÉ FUNKCE --------------------
   function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, m => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[m]));
+    return String(s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
   }
 
   function toast(msg) {
@@ -799,85 +888,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => d.remove(), 5000);
   }
 
+  // Inicializace dual-rows při prvním načtení (pro případ, že už jsme v režimu výpočtu)
+  initDualCalcRows();
+
   console.log("✅ Logika aplikace úspěšně načtena.");
-});
-
-
-// =====================================================
-// 🧩 DOPLNĚNÍ: OPRAVA VÝSLEDKU A MODÁLNÍ HODNOCENÍ
-// =====================================================
-
-document.addEventListener("DOMContentLoaded", () => {
-  // vytvoření modálního okna pro hodnocení
-  if (!document.getElementById("result-modal")) {
-    const modal = document.createElement("div");
-    modal.id = "result-modal";
-    modal.className = "hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4";
-    modal.innerHTML = `
-      <div class='bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-2xl space-y-4 relative text-center'>
-        <button id='close-result-modal' class='absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none'>&times;</button>
-        <h3 class='text-xl font-semibold text-white mb-4'>📊 Shrnutí a hodnocení</h3>
-        <div id='result-content' class='text-gray-200 text-left space-y-3 text-sm leading-relaxed'></div>
-      </div>`;
-    document.body.appendChild(modal);
-    document.getElementById("close-result-modal").onclick = () =>
-      modal.classList.add("hidden");
-  }
-
-  // přepis akce kontroly výpočtu
-  const oldCheck = document.getElementById("check-calculation-button");
-  if (oldCheck) {
-    oldCheck.addEventListener("click", (e) => {
-      e.preventDefault();
-      const modal = document.getElementById("result-modal");
-      const content = document.getElementById("result-content");
-      const formula = document.getElementById("formula-input").value.trim();
-      const substitution = document.getElementById("substitution-input").value.trim();
-      const answer = document.getElementById("user-answer").value.trim();
-      const unit = document.getElementById("unit-select").value;
-
-      const symbol = (function() {
-        const r = [...document.querySelectorAll(".zapis-row")].find(x => x.querySelector(".zapis-unknown")?.checked);
-        const s = r?.querySelector(".zapis-symbol")?.value;
-        return s && s !== "-" ? s : "W";
-      })();
-
-      // kontrola formátu výsledku (musí začínat symbolem hledané veličiny)
-      let answerCheck = "";
-      if (!answer.startsWith(symbol + "=")) {
-        answerCheck = `⚠️ Výsledek by měl začínat hledanou veličinou (např. <b>${symbol}=...</b>).`;
-      }
-
-      const summaryZapis = [...document.querySelectorAll(".zapis-row")].map(r => {
-        const s = r.querySelector(".zapis-symbol").value;
-        const v = r.querySelector(".zapis-value").value.trim();
-        const u = r.querySelector(".zapis-unit").value;
-        return `${s} = ${v} ${u}`;
-      }).join("<br>");
-
-      content.innerHTML = `
-        <div class='bg-gray-900 border border-gray-700 rounded p-3'>
-          <b>Zadání:</b><br>${document.getElementById("problem-text").textContent}
-        </div>
-        <div class='bg-gray-900 border border-gray-700 rounded p-3'>
-          <b>Zápis:</b><br>${summaryZapis}
-        </div>
-        <div class='bg-gray-900 border border-gray-700 rounded p-3'>
-          <b>Vzorec:</b> ${formula}<br>
-          <b>Dosazení:</b> ${substitution}<br>
-          <b>Výsledek:</b> ${answer} ${unit}<br>
-          ${answerCheck ? "<div class='text-yellow-400 mt-2'>" + answerCheck + "</div>" : ""}
-        </div>
-        <div class='bg-gray-900 border border-gray-700 rounded p-3'>
-          <b>Hodnocení:</b><br>
-          <ul class='list-disc pl-4 text-sm text-gray-300'>
-            <li>${answerCheck ? "Dbej na formát zápisu výsledku." : "✅ Výsledek formálně správný."}</li>
-            <li>Porovnej výsledek s očekávaným a zkontroluj jednotky.</li>
-            <li>Pokud se výsledek liší, zkus projít převody a dosazení.</li>
-          </ul>
-        </div>
-      `;
-      modal.classList.remove("hidden");
-    });
-  }
 });

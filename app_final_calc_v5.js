@@ -8,6 +8,38 @@
 */
 
 (function () {
+
+  console.log("🧩 Iniciuji v5 výpočetní modul...");
+
+  // --- Skryj původní (legacy) výpočetní část z app.js ---
+  document.addEventListener("DOMContentLoaded", () => {
+    const legacyCalc = document.querySelector("#main-calculation-step .flex.flex-col.space-y-2");
+    if (legacyCalc) {
+      legacyCalc.style.display = "none";
+      console.log("🧹 Původní výpočetní blok (z app.js) byl skryt.");
+    }
+
+    // --- Přidej responzivní stylování pro mobily ---
+    const responsiveCSS = `
+      @media (max-width: 640px) {
+        #calc-box-v5 input {
+          width: 100% !important;
+        }
+        #calc-box-v5 .flex {
+          flex-direction: column !important;
+          align-items: stretch !important;
+        }
+        #calc-box-v5 span {
+          display: none !important;
+        }
+      }
+    `;
+    const styleEl = document.createElement("style");
+    styleEl.textContent = responsiveCSS;
+    document.head.appendChild(styleEl);
+    console.log("📱 Responzivní CSS pro výpočetní část přidáno.");
+  });
+  
   console.log("✅ app_final_calc_v5.js načten a spuštěn!");
 
   const $ = (s, c=document) => c.querySelector(s);

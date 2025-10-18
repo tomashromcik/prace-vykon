@@ -176,11 +176,11 @@
 <script>
   window.addEventListener("load", () => {
     console.log("🧩 Pokus o načtení app_final_calc_v5.js po načtení stránky...");
-    const script = document.createElement("script");
-    script.src = "./app_final_calc_v5.js?" defer + Date.now(); // obejde cache
-    script.onload = () => console.log("✅ app_final_calc_v5.js skutečně spuštěn!");
-    script.onerror = () => console.error("❌ Nepodařilo se spustit app_final_calc_v5.js");
-    document.body.appendChild(script);
+    const s = document.createElement("script");
+    s.src = "./app_final_calc_v5.js?" + Date.now();  // obejde cache
+    s.onload = () => console.log("✅ app_final_calc_v5.js skutečně spuštěn!");
+    s.onerror = () => console.error("❌ Nepodařilo se spustit app_final_calc_v5.js");
+    document.body.appendChild(s);
   });
 </script>
 

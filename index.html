@@ -172,11 +172,16 @@
   </div>
 
   <!-- JS -->
-  <script src="app.js" defer></script>
+  <script src="app.js"></script>
   <script>
-    // Zkontroluj, že app_final_calc_v4.js existuje a načte se později
-    console.log("🧩 Pokus o načtení app_final_calc_v4.js ...");
+    window.addEventListener("load", () => {
+      console.log("🧩 Pokus o načtení app_final_calc_v4.js po načtení stránky...");
+      const script = document.createElement("script");
+      script.src = "./app_final_calc_v4.js?" + Date.now(); // obejde cache
+      script.onload = () => console.log("✅ app_final_calc_v4.js skutečně spuštěn!");
+      script.onerror = () => console.error("❌ Nepodařilo se spustit app_final_calc_v4.js");
+      document.body.appendChild(script);
+    });
   </script>
-  <script src="./app_final_calc_v4.js" defer></script>
 </body>
 </html>

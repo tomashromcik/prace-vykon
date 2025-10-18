@@ -274,4 +274,15 @@
   }
 
   console.log("✅ app_final_calc_v5.js načten a připraven.");
+    // 💡 Nouzová inicializace po kliknutí na tlačítko "Spustit"
+  window.addEventListener("load", () => {
+    const startBtn = document.querySelector("#start-button");
+    if (startBtn) {
+      startBtn.addEventListener("click", () => {
+        console.log("▶️ Vynucená inicializace v5 po kliknutí na Spustit...");
+        setTimeout(() => initWhenPracticeVisible(), 400); // zpoždění, než se DOM překreslí
+      });
+    }
+  });
+
 })();

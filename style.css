@@ -1,0 +1,153 @@
+/* ========== ZÁKLADNÍ NASTAVENÍ ========== */
+body {
+  font-family: 'Inter', sans-serif;
+}
+.app-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+.main-card {
+  width: 100%;
+  max-width: 800px;
+  background-color: #1f2937; /* gray-800 */
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* ========== TLAČÍTKA ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-primary {
+  background-color: #3b82f6; /* blue-500 */
+  color: white;
+}
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+.btn-secondary {
+  background-color: #374151; /* gray-700 */
+  color: #e5e7eb; /* gray-200 */
+}
+.btn-secondary:hover {
+  background-color: #4b5563;
+}
+.btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* ========== FORM INPUTY ========== */
+.form-input-dark {
+  background-color: #111827; /* gray-900 */
+  color: #f9fafb; /* gray-50 */
+  border: 1px solid #374151;
+}
+.form-input-dark:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* ========== TEXTY ========== */
+#problem-text {
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+/* ========== FEEDBACK ========== */
+.feedback-correct {
+  background-color: rgba(34, 197, 94, 0.15);
+  border-left: 4px solid #22c55e;
+  color: #86efac;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  margin-top: 1rem;
+}
+.feedback-wrong {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-left: 4px solid #ef4444;
+  color: #fca5a5;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  margin-top: 1rem;
+}
+
+/* ========== MODÁLY ========== */
+#calculator-modal,
+#formula-modal,
+#diagram-modal {
+  animation: fadeIn 0.25s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+#calculator-buttons button {
+  background-color: #374151;
+  color: white;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  font-size: 1.1rem;
+  transition: background-color 0.2s, transform 0.1s;
+}
+#calculator-buttons button:hover {
+  background-color: #4b5563;
+}
+#calculator-buttons button:active {
+  transform: scale(0.95);
+}
+
+/* ========== TUTORIÁL ========== */
+#tutorial-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 40;
+}
+#tutorial-message-box {
+  z-index: 50;
+}
+
+/* ========== ANIMACE A PŘECHODY ========== */
+.hidden {
+  display: none !important;
+}
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* ========== RESPONSIVITA ========== */
+@media (max-width: 768px) {
+  .main-card {
+    padding: 1rem;
+  }
+  .btn {
+    font-size: 0.95rem;
+    padding: 0.6rem 0.8rem;
+  }
+  h1 {
+    font-size: 1.75rem;
+  }
+  #problem-text {
+    font-size: 1rem;
+  }
+}
+
+/* ========== POMOCNÉ STYLY ========== */
+.border-dashed {
+  border-style: dashed;
+}

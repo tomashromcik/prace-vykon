@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fyzika pro ZŠ – Práce a výkon</title>
+
+  <!-- Tailwind (ponecháno kvůli stávajícímu projektu) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Písmo -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <!-- Vlastní styl (volitelné) -->
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .btn { border-radius: 0.75rem; padding: 0.5rem 1rem; transition: all 150ms; }
+    .btn-primary { background: #2563eb; color:#fff; }
+    .btn-primary:hover { background:#3b82f6; }
+    .btn-secondary { background:#374151; color:#fff; }
+    .btn-secondary:hover { background:#4b5563; }
+    .btn-disabled { opacity:.5; cursor:not-allowed; }
+    .active-pick { box-shadow: 0 0 0 2px rgba(59,130,246,.8); background:#2563eb; color:#fff; }
+    .feedback-wrong { background: rgba(127,29,29,.3); border:1px solid #7f1d1d; color:#fecaca; border-radius: 0.75rem; padding:0.75rem; }
+    .feedback-correct { background: rgba(20,83,45,.35); border:1px solid #166534; color:#bbf7d0; border-radius: 0.75rem; padding:0.75rem; }
+  </style>
+</head>
+
+<body class="bg-gray-900 text-gray-200 font-inter">
+  <div class="app-container p-4">
+    <div class="main-card max-w-3xl mx-auto bg-gray-800 rounded-2xl shadow-lg p-6 space-y-6">
+
+      <!-- Úvodní obrazovka -->
+      <div id="setup-screen">
+        <h1 class="text-3xl font-bold text-center text-white mb-2">Fyzika hrou</h1>
+        <p class="text-center text-gray-400 mb-8">Procvičování úloh pro základní školy</p>
+
+        <div class="space-y-6">
+          <div>
+            <label class="block text-lg font-semibold mb-3">1️⃣ Zvolte režim</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button id="mode-practice" class="btn btn-secondary">Procvičování</button>
+              <button id="mode-test" class="btn btn-secondary">Test</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-lg font-semibold mb-3">2️⃣ Zvolte úroveň</label>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button id="level-easy" class="btn btn-secondary">Jednoduchá</button>
+              <button id="level-normal" class="btn btn-secondary">Normální</button>
+              <button id="level-hard" class="btn btn-secondary">Obtížná</button>
+            </div>
+          </div>
+
+          <div>
+            <label for="topic-select" class="block text-lg font-semibold mb-3">3️⃣ Vyberte téma</label>
+            <select id="topic-select" class="w-full p-3 rounded-xl bg-gray-900 border border-gray-700 focus:ring-2 focus:ring-blue-500">
+              <option value="prace">Práce (W)</option>
+              <option value="vykon">Výkon (P)</option>
+            </select>
+          </div>
+
+          <div>
+            <button id="start-button" class="btn btn-primary w-full btn-disabled" disabled>Spustit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hlavní aplikace -->
+      <div id="practice-screen" class="hidden">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h2 id="practice-title" class="text-2xl font-bold text-blue-400">Téma: Práce</h2>
+            <button id="back-button" class="text-sm text-gray-400 hover:text-blue-400">&larr; Zpět na výběr</button>
+          </div>
+          <button id="new-problem-button" class="btn btn-secondary text-sm">Nový příklad</button>
+        </div>
+
+        <!-- Zadání -->
+        <div id="problem-wrapper" class="mb-4">
+          <div id="problem-container" class="p-4 bg-gray-900 border border-dashed border-gray-600 rounded-xl">
+            <p id="problem-text" class="text-lg leading-relaxed"></p>
+          </div>
+        </div>
+
+        <!-- Nástroje -->
+        <div id="tools-container" class="flex flex-wrap justify-end gap-2 mb-6">
+          <button id="open-diagram-button" class="btn btn-secondary text-sm py-1 px-3">🖼 Obrázek</button>
+          <button id="open-formula-button" class="btn btn-secondary text-sm py-1 px-3">📐 Vzorec</button>
+          <button id="open-help-button" class="btn btn-secondary text-sm py-1 px-3">💡 Nápověda</button>
+          <button id="open-calculator-button" class="btn btn-secondary text-sm py-1 px-3">🧮 Kalkulačka</button>
+        </div>
+
+        <!-- Krok 1: Zápis -->
+        <div id="zapis-step">
+          <h3 class="text-lg font-semibold mb-3">1️⃣ Proveďte zápis</h3>
+          <p class="text-sm text-gray-400 mb-4">Vyberte známé veličiny, doplňte hodnoty a jednotky. Označte hledanou veličinu.</p>
+          <div id="zapis-container" class="space-y-2 mb-4"></div>
+          <button id="add-zapis-row-button" class="btn btn-secondary w-full mb-4">+ Přidat veličinu</button>
+          <button id="check-zapis-button" class="btn btn-primary w-full">Zkontrolovat zápis</button>
+          <div id="zapis-feedback-container" class="mt-4"></div>
+        </div>
+
+        <!-- Krok 2: Výpočet -->
+        <div id="vypocet-step" class="hidden">
+          <div id="zapis-review-container" class="p-4 bg-gray-900 border border-gray-700 rounded-xl mb-6"></div>
+
+          <div id="calc-box" class="bg-blue-950/40 border border-blue-700/40 rounded-xl p-4 space-y-3">
+            <h3 class="text-lg font-semibold text-blue-300 mb-2">2️⃣ Výpočetní část</h3>
+
+            <!-- řádek 1: vzorec -->
+            <div id="row-formula" class="grid grid-cols-[8rem,auto] sm:grid-cols-[8rem,1.5rem,1fr] gap-2 items-center">
+              <input id="formula-lhs" maxlength="2" placeholder="např. W"
+                     class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white">
+              <div class="hidden sm:flex items-center justify-center text-gray-300">=</div>
+              <input id="formula-rhs" placeholder="např. F * s"
+                     class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white">
+            </div>
+
+            <!-- řádek 2: dosazení -->
+            <div id="row-subs" class="grid grid-cols-[8rem,auto] sm:grid-cols-[8rem,1.5rem,1fr] gap-2 items-center">
+              <input id="subs-lhs" maxlength="2" placeholder="např. W"
+                     class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white">
+              <div class="hidden sm:flex items-center justify-center text-gray-300">=</div>
+              <input id="subs-rhs" placeholder="např. 1000 * 2"
+                     class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white">
+            </div>
+
+            <!-- řádek 3: výsledek -->
+            <div id="row-result" class="grid grid-cols-[8rem,auto] sm:grid-cols-[8rem,1.5rem,1fr,7.5rem] gap-2 items-center">
+              <input id="result-lhs" maxlength="2" placeholder="např. W"
+                     class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white">
+              <div class="hidden sm:flex items-center justify-center text-gray-300">=</div>
+              <input id="result-rhs" placeholder="např. 2000"
+                     class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white">
+              <select id="unit-select" class="p-2 rounded-md bg-gray-900 border border-gray-700 text-white">
+                <option>J</option><option>kJ</option><option>MJ</option>
+              </select>
+            </div>
+
+            <button id="check-calculation-button" class="btn btn-primary w-full mt-2">Ověřit výpočet</button>
+            <div id="vypocet-feedback-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODÁLY -->
+  <!-- Kalkulačka -->
+  <div id="calculator-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-800 rounded-2xl shadow-lg p-4 w-full max-w-xs space-y-4 relative">
+      <button id="close-calculator-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+      <div class="bg-gray-900 rounded-lg p-4 text-right">
+        <div id="calculator-history" class="text-gray-500 text-sm h-6 mb-1 overflow-x-auto"></div>
+        <div id="calculator-display" class="text-white text-4xl font-light break-all">0</div>
+      </div>
+      <div id="calculator-buttons" class="grid grid-cols-4 gap-2"></div>
+    </div>
+  </div>
+
+  <!-- Vzorec -->
+  <div id="formula-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 relative text-center">
+      <button id="close-formula-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+      <h3 class="text-xl font-semibold text-white mb-4">Vzorec</h3>
+      <div id="formula-svg-container" class="flex justify-center items-center"></div>
+    </div>
+  </div>
+
+  <!-- Obrázek -->
+  <div id="diagram-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 relative text-center">
+      <button id="close-diagram-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+      <h3 id="diagram-title" class="text-xl font-semibold text-white mb-4">Obrázek</h3>
+      <div id="diagram-svg-container" class="flex justify-center items-center"></div>
+    </div>
+  </div>
+
+  <!-- Nápověda -->
+  <div id="help-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+    <div class="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-sm space-y-4 relative text-center">
+      <button id="close-help-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+      <h3 class="text-xl font-semibold text-white mb-4">Nápověda</h3>
+      <div id="help-content" class="text-gray-200 text-sm leading-relaxed"></div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="app_final_calc_v12.js" defer></script>
+</body>
+</html>

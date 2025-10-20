@@ -151,3 +151,27 @@ body {
 .border-dashed {
   border-style: dashed;
 }
+
+/* --- Fix pro výpočetní část --- */
+#calc-box .calc-row {
+  display: grid;
+  grid-template-columns: 7rem 1.5rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#calc-box .calc-row input,
+#calc-box .calc-row select {
+  background-color: #0f172a; /* deep gray-blue */
+  border: 1px solid #374151;
+  color: #f9fafb;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+#calc-box .calc-row .eq-sign {
+  text-align: center;
+  color: #9ca3af;
+  font-weight: 500;
+}
+

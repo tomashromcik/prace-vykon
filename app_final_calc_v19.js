@@ -317,8 +317,7 @@
     tgt.innerHTML = `
       <div class="p-3 bg-gray-900 border border-gray-700 rounded">
         <div class="font-semibold mb-2 text-gray-300">Souhrn zápisu:</div>
-        <pre class="text-gray-200 text-sm whitespace-pre-wrap">${lines.join("
-")}</pre>
+        <pre class="text-gray-200 text-sm whitespace-pre-wrap">${lines.join("")}</pre>
       </div>`;
   }
 

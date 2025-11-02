@@ -3,8 +3,9 @@
 // ---------------------------------------------------------------
 // • Přepínání mezi úvodní a procvičovací obrazovkou
 // • Volba režimu, obtížnosti a tématu (Práce/Výkon)
-// • Generování příkladů a příprava proměnných pro výpočetní modul
-// • Kompatibilní s app_final_calc_v13.js
+// • Generování příkladů a *globální* zpřístupnění currentProblem
+// • Vyvolává custom událost 'problem:updated' pro navazující moduly
+// • Kompatibilní s app_final_calc_v22.js (fallback zápis + modály)
 // ===============================================================
 
 console.log("Načítání app_cleaned_v11.js ...");
@@ -16,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedMode = null;
   let selectedLevel = null;
   let selectedTopic = "prace";
-  let currentProblem = null;
+  let currentProblem = null;   // ← exportujeme na window
 
   // -------------------- DOM ELEMENTY --------------------
   const setupScreen = document.getElementById("setup-screen");
@@ -88,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const variant = randInt(1, 2);
     let text, givens, result;
 
-    if (selectedTopic === "vykon") selectedTopic = "prace";
+    if (selectedTopic === "vykon") selectedTopic = "prace"; // zatím držíme jen práci
 
     if (variant === 1) {
       const FkN = randInt(1, 9);
@@ -112,10 +113,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     currentProblem = { text, givens, result };
     problemTextEl.textContent = text;
+
+    // 🔴 DŮLEŽITÉ: vystavit pro externí moduly
+    window.currentProblem = currentProblem;
+
+    // 🔵 Informativní událost pro moduly (vzorec/obrázek apod.)
+    document.dispatchEvent(new CustomEvent("problem:updated", { detail: currentProblem }));
+
     console.log("🆕 Nový příklad:", text);
   }
 
   function prepareUnitsForTopic() {
+    if (!unitSelect) return;
     unitSelect.innerHTML = "";
     const units = selectedTopic === "vykon" ? ["W","kW","MW"] : ["J","kJ","MJ"];
     units.forEach(u => {
@@ -141,6 +150,6 @@ document.addEventListener("DOMContentLoaded", () => {
     generateProblem();
   });
 
-  // -------------------- SPOUŠTĚCÍ LOGIKA --------------------
-  console.log("✅ app_cleaned_v11.js připraven (čekám na externí výpočetní modul).");
+  // -------------------- FINISH --------------------
+  console.log("✅ app_cleaned_v11.js připraven (currentProblem exportován na window).");
 });

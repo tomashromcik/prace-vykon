@@ -104,42 +104,21 @@
           <div id="zapis-feedback-container" class="mt-4"></div>
         </div>
 
-        <!-- Krok 2: Výpočet -->
-        <div id="vypocet-step" class="hidden">
-          <div id="zapis-review-container" class="p-4 bg-gray-900 border border-gray-700 rounded-xl mb-6"></div>
+  <!-- Krok 2: Výpočet (čistý, bez starých single-inputů) -->
+<div id="vypocet-step" class="hidden">
+  <!-- shrnutí zápisu -->
+  <div id="zapis-review-container" class="p-4 bg-gray-900 border border-gray-700 rounded-xl mb-6"></div>
 
-          <!-- řádek 1: vzorec -->
-<div class="calc-row">
-  <input id="formula-lhs" maxlength="2" placeholder="např. W">
-  <div class="eq-sign">=</div>
-  <input id="formula-rhs" placeholder="např. F * s">
+  <!-- nový výpočetní box vykreslí skript app_final_calc_v26.js -->
+  <div id="calc-box-v26"></div>
+
+  <button id="check-calculation-button" class="btn btn-primary w-full mt-2">
+    Ověřit výpočet
+  </button>
+
+  <div id="vypocet-feedback-container" class="mt-3"></div>
 </div>
 
-<!-- řádek 2: dosazení -->
-<div class="calc-row">
-  <input id="subs-lhs" maxlength="2" placeholder="např. W">
-  <div class="eq-sign">=</div>
-  <input id="subs-rhs" placeholder="např. 1000 * 2">
-</div>
-
-<!-- řádek 3: výsledek -->
-<div class="calc-row">
-  <input id="result-lhs" maxlength="2" placeholder="např. W">
-  <div class="eq-sign">=</div>
-  <input id="result-rhs" placeholder="např. 2000">
-  <select id="unit-select">
-    <option>J</option><option>kJ</option><option>MJ</option>
-  </select>
-</div>
-
-
-            <button id="check-calculation-button" class="btn btn-primary w-full mt-2">Ověřit výpočet</button>
-            <div id="vypocet-feedback-container"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- MODÁLY -->
   <!-- Kalkulačka -->

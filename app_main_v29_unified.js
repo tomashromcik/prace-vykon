@@ -761,3 +761,33 @@ function renderCalculator(){
 
 // -------------------- Hotovo --------------------
 console.log("✅ app_main_v29_unified.js připraven.");
+
+// --- Autostart fallback (bezpečně až po definicích funkcí) ---
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    console.log("🛟 Autostart fallback aktivní");
+    const practiceVisible =
+      !document.querySelector('#practice-screen') ||
+      !document.querySelector('#practice-screen').classList.contains('hidden');
+
+    const btnNew = document.querySelector('#new-problem-button');
+    if (btnNew) {
+      btnNew.addEventListener('click', () => {
+        if (typeof fullReset === 'function') fullReset();
+        if (typeof generateProblem === 'function') generateProblem();
+        if (typeof prepareUnitsForAsk === 'function') prepareUnitsForAsk();
+      }, { once: false });
+    }
+
+    // první autogenerování, pokud už jsme na practice a nic ještě není
+    if (practiceVisible && (!window.currentProblem || !document.querySelector('#problem-text')?.textContent.trim())) {
+      if (typeof fullReset === 'function') fullReset();
+      if (typeof generateProblem === 'function') generateProblem();
+      if (typeof prepareUnitsForAsk === 'function') prepareUnitsForAsk();
+      console.log("🚀 Autostart: první příklad byl vygenerován");
+    }
+  } catch (e) {
+    console.warn("Autostart fallback: něco se nepovedlo", e);
+  }
+});
+

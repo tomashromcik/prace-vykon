@@ -619,42 +619,49 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function liveSubs(){
-    const L = ($("#subs-lhs")?.value || "").trim();
-    const R = ($("#subs-rhs")?.value || "").trim();
-    const lhsOK = /^[WwFfSs]$/.test(L);
-    let rhsOK = false;
+  const L = ($("#subs-lhs")?.value || "").trim();
+  const R = ($("#subs-rhs")?.value || "").trim();
+  const lhsOK = /^[WwFfSs]$/.test(L);
+  let rhsOK = false;
 
-    const Fg = currentProblem?.givens.find(g=>g.symbol==="F");
-    const sg = currentProblem?.givens.find(g=>g.symbol==="s");
-    const Wv = currentProblem?.result;
+  const Fg = currentProblem?.givens.find(g=>g.symbol==="F");
+  const sg = currentProblem?.givens.find(g=>g.symbol==="s");
+  const Wg = currentProblem?.givens.find(g=>g.symbol==="W");
 
-    const unknown = getUnknownSymbolFromZapis() || currentProblem?.askFor || "W";
-    const txt = R.replace(/\s+/g,"");
+  const unknown = getUnknownSymbolFromZapis() || currentProblem?.askFor || "W";
+  const txt = R.replace(/\s+/g,"");                // bez mezer
+  const num = (s)=>parseNum(s);
 
-    const num = (s)=>parseNum(s);
-    const pairOK = (a,b,x,y)=> (almostEqual(a,x)&&almostEqual(b,y))||(almostEqual(a,y)&&almostEqual(b,x));
-
-    if (unknown === "W" && Fg && sg) {
-      const m = txt.match(/^(\d+(?:[.,]\d+)?)\*(\d+(?:[.,]\d+)?)$/);
-      if (m) {
-        const a = num(m[1]), b = num(m[2]);
-        rhsOK = isFinite(a)&&isFinite(b) && pairOK(a,b,Fg.value,sg.value);
-      }
-    } else if (unknown === "F" && sg && isFinite(Wv)) {
-      const m = txt.match(/^(\d+(?:[.,]\d+)?)\/(\d+(?:[.,]\d+)?)$/);
-      if (m) {
-        rhsOK = almostEqual(num(m[1]), Wv) && almostEqual(num(m[2]), sg.value);
-      }
-    } else if (unknown === "s" && Fg && isFinite(Wv)) {
-      const m = txt.match(/^(\d+(?:[.,]\d+)?)\/(\d+(?:[.,]\d+)?)$/);
-      if (m) {
-        rhsOK = almostEqual(num(m[1]), Wv) && almostEqual(num(m[2]), Fg.value);
-      }
+  // násobení pro W = F * s
+  if (unknown === "W" && Fg && sg) {
+    const m = txt.match(/^(\d+(?:[.,]\d+)?)\*(\d+(?:[.,]\d+)?)$/);
+    if (m) {
+      const a = num(m[1]), b = num(m[2]);
+      const pairOK = (x,y)=> (almostEqual(a,x)&&almostEqual(b,y)) || (almostEqual(a,y)&&almostEqual(b,x));
+      rhsOK = isFinite(a) && isFinite(b) && pairOK(Fg.value, sg.value);
     }
-
-    (lhsOK ? markOK : markBAD)($("#subs-lhs"));
-    (rhsOK ? markOK : markBAD)($("#subs-rhs"));
   }
+
+  // dělení pro F = W / s  (povol / i :)
+  else if (unknown === "F" && sg && Wg) {
+    const m = txt.match(/^(\d+(?:[.,]\d+)?)[/:](\d+(?:[.,]\d+)?)$/);
+    if (m) {
+      rhsOK = almostEqual(num(m[1]), Wg.value) && almostEqual(num(m[2]), sg.value);
+    }
+  }
+
+  // dělení pro s = W / F  (povol / i :)
+  else if (unknown === "s" && Fg && Wg) {
+    const m = txt.match(/^(\d+(?:[.,]\d+)?)[/:](\d+(?:[.,]\d+)?)$/);
+    if (m) {
+      rhsOK = almostEqual(num(m[1]), Wg.value) && almostEqual(num(m[2]), Fg.value);
+    }
+  }
+
+  (lhsOK ? markOK : markBAD)($("#subs-lhs"));
+  (rhsOK ? markOK : markBAD)($("#subs-rhs"));
+}
+
 
   function liveRes(){
     const L = ($("#result-lhs")?.value || "").trim();
@@ -702,25 +709,29 @@ document.addEventListener("DOMContentLoaded", () => {
     if (unknown==="s") formulaOK = /^W\/F$/i.test(rNo) && /^[sS]$/.test(fL);
 
     // dosazení
-    (function(){
-      const txt = sR.replace(/\s+/g,"");
-      const Fg = currentProblem?.givens.find(g=>g.symbol==="F");
-      const sg = currentProblem?.givens.find(g=>g.symbol==="s");
-      const Wv = currentProblem?.result;
-      const num = (x)=>parseNum(x);
-      const pairOK = (a,b,x,y)=> (almostEqual(a,x)&&almostEqual(b,y))||(almostEqual(a,y)&&almostEqual(b,x));
+(function(){
+  const txt = sR.replace(/\s+/g,"");
+  const Fg = currentProblem?.givens.find(g=>g.symbol==="F");
+  const sg = currentProblem?.givens.find(g=>g.symbol==="s");
+  const Wg = currentProblem?.givens.find(g=>g.symbol==="W");
+  const num = (x)=>parseNum(x);
 
-      if (unknown==="W" && Fg && sg) {
-        const m=txt.match(/^(\d+(?:[.,]\d+)?)\*(\d+(?:[.,]\d+)?)$/);
-        if (m) subsOK = pairOK(num(m[1]),num(m[2]),Fg.value,sg.value) && /^[Ww]$/.test(sL);
-      } else if (unknown==="F" && sg && isFinite(Wv)) {
-        const m=txt.match(/^(\d+(?:[.,]\d+)?)\/(\d+(?:[.,]\d+)?)$/);
-        if (m) subsOK = almostEqual(num(m[1]),Wv)&&almostEqual(num(m[2]),sg.value) && /^[Ff]$/.test(sL);
-      } else if (unknown==="s" && Fg && isFinite(Wv)) {
-        const m=txt.match(/^(\d+(?:[.,]\d+)?)\/(\d+(?:[.,]\d+)?)$/);
-        if (m) subsOK = almostEqual(num(m[1]),Wv)&&almostEqual(num(m[2]),Fg.value) && /^[sS]$/.test(sL);
-      }
-    })();
+  if (unknown==="W" && Fg && sg) {
+    const m = txt.match(/^(\d+(?:[.,]\d+)?)\*(\d+(?:[.,]\d+)?)$/);
+    if (m) {
+      const a = num(m[1]), b = num(m[2]);
+      const pairOK = (x,y)=> (almostEqual(a,x)&&almostEqual(b,y)) || (almostEqual(a,y)&&almostEqual(b,x));
+      subsOK = pairOK(Fg.value, sg.value) && /^[Ww]$/.test(sL);
+    }
+  } else if (unknown==="F" && sg && Wg) {
+    const m = txt.match(/^(\d+(?:[.,]\d+)?)[/:](\d+(?:[.,]\d+)?)$/);
+    if (m) subsOK = almostEqual(num(m[1]), Wg.value) && almostEqual(num(m[2]), sg.value) && /^[Ff]$/.test(sL);
+  } else if (unknown==="s" && Fg && Wg) {
+    const m = txt.match(/^(\d+(?:[.,]\d+)?)[/:](\d+(?:[.,]\d+)?)$/);
+    if (m) subsOK = almostEqual(num(m[1]), Wg.value) && almostEqual(num(m[2]), Fg.value) && /^[sS]$/.test(sL);
+  }
+})();
+
 
     // výsledek
     const val = parseNum(rR);

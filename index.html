@@ -26,6 +26,14 @@
     .feedback-wrong { background: rgba(127,29,29,.3); border:1px solid #7f1d1d; color:#fecaca; border-radius: 0.75rem; padding:0.75rem; }
     .feedback-correct { background: rgba(20,83,45,.35); border:1px solid #166534; color:#bbf7d0; border-radius: 0.75rem; padding:0.75rem; }
   </style>
+
+<!-- PATCH: minimal layout helpers for calc rows -->
+<style id="calc-row-patch">
+  .calc-row { display:grid; grid-template-columns:max-content 16px 1fr max-content max-content; gap:8px; align-items:center; }
+  .calc-row .eq { text-align:center; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+</style>
+
 </head>
 
 <body class="bg-gray-900 text-gray-200 font-inter">
@@ -110,43 +118,7 @@
   <div id="zapis-review-container" class="p-4 bg-gray-900 border border-gray-700 rounded-xl mb-6"></div>
 
   <!-- nový výpočetní box vykreslí skript app_final_calc_v26.js -->
-  
-  <!-- 1) Vzorec -->
-  <div class="p-4 bg-gray-900 border border-gray-700 rounded-xl">
-    <div class="text-sm text-gray-400 mb-2">Vzorec</div>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-      <input id="formula-lhs" class="p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="W / F / s">
-      <div class="flex items-center justify-center text-gray-400">=</div>
-      <input id="formula-rhs" class="p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="F*s | W/s | W/F">
-    </div>
-  </div>
-
-  <!-- 2) Dosazení -->
-  <div class="p-4 bg-gray-900 border border-gray-700 rounded-xl mt-3">
-    <div class="text-sm text-gray-400 mb-2">Dosazení</div>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-      <input id="subs-lhs" class="p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="W / F / s">
-      <div class="flex items-center justify-center text-gray-400">=</div>
-      <input id="subs-rhs" class="p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="např. 500*2 nebo 1000/2">
-    </div>
-  </div>
-
-  <!-- 3) Výsledek -->
-  <div class="p-4 bg-gray-900 border border-gray-700 rounded-xl mt-3">
-    <div class="text-sm text-gray-400 mb-2">Výsledek</div>
-    <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
-      <input id="result-lhs" class="p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="W / F / s">
-      <div class="flex items-center justify-center text-gray-400">=</div>
-      <input id="result-rhs" class="p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="číslo">
-      <select id="unit-select" class="p-2 rounded-md bg-gray-800 border border-gray-700">
-        <option value="J">J</option>
-        <option value="kJ">kJ</option>
-        <option value="MJ">MJ</option>
-      </select>
-      <div class="text-sm text-gray-400 flex items-center" id="vypocet-tips"></div>
-    </div>
-  </div>
-
+  <div id="calc-box-v26"></div>
 
   <button id="check-calculation-button" class="btn btn-primary w-full mt-2">
     Ověřit výpočet
@@ -198,7 +170,7 @@
 
   <!-- JS -->
 <!-- VYMAZAT staré <script src="app_cleaned_v11.js"> a app_final_calc_* -->
-<script src="app_main_v29_unified_autostart.js?v=2025-11-03-1" defer></script>
+<script src="app_main_v29_unified.js?v=2025-03-09-1" defer></script>
 
 
 

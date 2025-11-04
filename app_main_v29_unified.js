@@ -8,7 +8,7 @@
    (6) Fix výsledku: vždy počítáme očekávanou hodnotu z daných veličin
    ========================================================== */
 
-console.log("🧩 Načítání app_main_v29_unified.js ...");
+console.log("🧩nové Načítání app_main_v29_unified.js ...");
 
 // -------------------- Pomocné zkratky --------------------
 const $  = (sel) => document.querySelector(sel);
@@ -161,40 +161,6 @@ newProblemButton?.addEventListener("click", ()=>{
   prepareUnitsForAsk();
 });
 
-
-
-/* --- AUTOSTART FALLBACK ---
-   V některých nasazeních (např. GitHub Pages) může být #practice-screen už viditelný
-   bez kliknutí na "Spustit" (nebo se zpřístupní později). Tohle zajistí vygenerování
-   prvního příkladu jakmile je practice vidět.
-*/
-(function setupAutostartFallback(){
-  let started = false;
-  const target = document.getElementById('practice-screen');
-  const tryStart = () => {
-    const visible = target && !target.classList.contains('hidden');
-    if (visible && !started) {
-      started = true;
-      // stejné kroky jako ve startButton click
-      showPractice();
-      fullReset();
-      generateProblem();
-      prepareUnitsForAsk();
-      console.log('🚀 Autostart: practice je viditelný, vygenerován první příklad.');
-    }
-  };
-  // 1) hned po načtení
-  tryStart();
-  // 2) po loadu
-  window.addEventListener('load', tryStart);
-  // 3) časový fallback
-  setTimeout(tryStart, 800);
-  // 4) když se mění class na practice (např. po kliknutí na Spustit jinde)
-  if (target) {
-    const mo = new MutationObserver(tryStart);
-    mo.observe(target, { attributes: true, attributeFilter: ['class'] });
-  }
-})();
 // -------------------- Reset obrazovky --------------------
 function resetZapis(addBaseRow=false){
   zapisStep.classList.remove("hidden");
@@ -825,3 +791,109 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+
+
+/* === PATCH: askFor-aware seeding, smart overwrite, and layout fix === */
+(function(){
+  'use strict';
+  function whenAppReady(cb){
+    let tries = 0;
+    const T = setInterval(function(){
+      const App = (window.__FyzikaApp || window.App);
+      if (App && typeof App === 'object' && App.state && App.els) {
+        clearInterval(T);
+        try { cb(App); } catch(e){ console.warn('Patch init error:', e); }
+      } else if (++tries > 200) { clearInterval(T); } // ~20s fallback
+    }, 100);
+  }
+
+  whenAppReady(function(App){
+    App.attachOverwrite = function(el, initValue){
+      if (!el) return;
+      el.value = initValue;
+      el.dataset.pristine = '1';
+      el.addEventListener('focus', () => el.select(), { once: true });
+      el.addEventListener('keydown', (e) => {
+        if (el.dataset.pristine === '1') {
+          if (e.key.length === 1) {
+            el.value = e.key;
+            el.dataset.pristine = '0';
+            e.preventDefault();
+          } else {
+            el.dataset.pristine = '0';
+          }
+        }
+      });
+      el.addEventListener('input', () => { el.dataset.pristine = '0'; }, { once: true });
+    };
+
+    App.applyCalcLayout = function(){
+      try{
+        const fr = App.els.formulaLHS && App.els.formulaLHS.parentElement;
+        if (fr && App.els.formulaRHS) {
+          fr.style.display = 'grid';
+          fr.style.gridTemplateColumns = 'max-content 16px 1fr';
+          fr.style.gap = '8px';
+          const eq = fr.querySelector('.eq') || fr.children[1];
+          if (eq) { eq.style.textAlign = 'center'; eq.textContent = '='; }
+          App.els.formulaLHS.style.width = '72px';
+          App.els.formulaRHS.style.width = '100%';
+        }
+        const sr = App.els.subsLHS && App.els.subsLHS.parentElement;
+        if (sr && App.els.subsRHS) {
+          sr.style.display = 'grid';
+          sr.style.gridTemplateColumns = 'max-content 16px 1fr';
+          sr.style.gap = '8px';
+          const eq = sr.querySelector('.eq') || sr.children[1];
+          if (eq) { eq.style.textAlign = 'center'; eq.textContent = '='; }
+          App.els.subsLHS.style.width = '72px';
+          App.els.subsRHS.style.width = '100%';
+        }
+        const rr = App.els.resultLHS && App.els.resultLHS.parentElement;
+        if (rr && App.els.resultRHS && App.els.unitSelect) {
+          rr.style.display = 'grid';
+          rr.style.gridTemplateColumns = 'max-content 16px 1fr max-content 1fr';
+          rr.style.gap = '8px';
+          const eq = rr.querySelector('.eq') || rr.children[1];
+          if (eq) { eq.style.textAlign = 'center'; eq.textContent = '='; }
+          App.els.resultLHS.style.width = '72px';
+          App.els.resultRHS.style.width = '100%';
+          App.els.unitSelect.style.minWidth = '84px';
+          const tips = App.els.vypocetTips;
+          if (tips) { tips.style.justifySelf = 'end'; tips.style.opacity = '.85'; }
+        }
+      }catch(e){ console.warn('applyCalcLayout error:', e); }
+    };
+
+    App._originalSeed = App.seedVypocetFields;
+    App.seedVypocetFields = function(){
+      const ask = this.state && this.state.askFor;
+      const rhsHintMap = { W: 'F*s', F: 'W/s', s: 'W/F' };
+      const subsHintMap = { W: 'např. 500*2 nebo 1000*2', F: 'např. 1000/2', s: 'např. 1000/500' };
+      const askSym = (ask || 'W');
+
+      if (this.els.formulaLHS) this.attachOverwrite(this.els.formulaLHS, askSym);
+      if (this.els.formulaRHS) { this.els.formulaRHS.value = ''; this.els.formulaRHS.placeholder = rhsHintMap[askSym]; }
+      if (this.els.subsLHS) this.attachOverwrite(this.els.subsLHS, askSym);
+      if (this.els.subsRHS) { this.els.subsRHS.value = ''; this.els.subsRHS.placeholder = subsHintMap[askSym]; }
+      if (this.els.resultLHS) this.attachOverwrite(this.els.resultLHS, askSym);
+      if (this.els.resultRHS) this.els.resultRHS.value = '';
+      if (this.els.unitSelect) this.els.unitSelect.value = (askSym === 'W' ? 'J' : askSym === 'F' ? 'N' : 'm');
+
+      if (typeof this.renderVypocetTips === 'function') {
+        this.renderVypocetTips('Vzorec trojúhelník: W nahoře, F·s dole. Pro ' + askSym + ' zvol správný tvar.');
+      }
+    };
+
+    if (!App._enterHooked) {
+      const origEnter = App.enterVypocet?.bind(App);
+      App.enterVypocet = function(){
+        if (origEnter) origEnter();
+        this.applyCalcLayout();
+      };
+      App._enterHooked = true;
+    }
+
+    App.applyCalcLayout();
+  });
+})();

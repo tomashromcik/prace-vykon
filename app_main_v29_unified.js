@@ -161,6 +161,40 @@ newProblemButton?.addEventListener("click", ()=>{
   prepareUnitsForAsk();
 });
 
+
+
+/* --- AUTOSTART FALLBACK ---
+   V některých nasazeních (např. GitHub Pages) může být #practice-screen už viditelný
+   bez kliknutí na "Spustit" (nebo se zpřístupní později). Tohle zajistí vygenerování
+   prvního příkladu jakmile je practice vidět.
+*/
+(function setupAutostartFallback(){
+  let started = false;
+  const target = document.getElementById('practice-screen');
+  const tryStart = () => {
+    const visible = target && !target.classList.contains('hidden');
+    if (visible && !started) {
+      started = true;
+      // stejné kroky jako ve startButton click
+      showPractice();
+      fullReset();
+      generateProblem();
+      prepareUnitsForAsk();
+      console.log('🚀 Autostart: practice je viditelný, vygenerován první příklad.');
+    }
+  };
+  // 1) hned po načtení
+  tryStart();
+  // 2) po loadu
+  window.addEventListener('load', tryStart);
+  // 3) časový fallback
+  setTimeout(tryStart, 800);
+  // 4) když se mění class na practice (např. po kliknutí na Spustit jinde)
+  if (target) {
+    const mo = new MutationObserver(tryStart);
+    mo.observe(target, { attributes: true, attributeFilter: ['class'] });
+  }
+})();
 // -------------------- Reset obrazovky --------------------
 function resetZapis(addBaseRow=false){
   zapisStep.classList.remove("hidden");

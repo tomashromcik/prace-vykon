@@ -3,36 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fyzika pro ZŠ – Práce a výkon</title>
-
+  <title>Fyzika pro ZŠ – Práce/Výkon</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-
   <style>
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
     .btn { border-radius: 0.75rem; padding: 0.5rem 1rem; transition: all 150ms; }
-    .btn-primary { background: #2563eb; color:#fff; }
-    .btn-primary:hover { background:#3b82f6; }
-    .btn-secondary { background:#374151; color:#fff; }
-    .btn-secondary:hover { background:#4b5563; }
-    .btn-disabled { opacity:.5; cursor:not-allowed; }
-    .feedback-wrong { background: rgba(127,29,29,.3); border:1px solid #7f1d1d; color:#fecaca; border-radius: 0.75rem; padding:0.75rem; }
-  </style>
-
-  <style id="calc-row-style">
+    .btn-primary { background:#2563eb; color:#fff; } .btn-primary:hover{ background:#3b82f6; }
+    .btn-secondary { background:#374151; color:#fff; } .btn-secondary:hover{ background:#4b5563; }
+    .feedback-wrong { background: rgba(127,29,29,.25); border:1px solid #7f1d1d; color:#fecaca; border-radius:0.75rem; padding:0.75rem; }
     .calc-row { display:grid; grid-template-columns:max-content 16px 1fr max-content max-content; gap:8px; align-items:center; }
     .calc-row .eq { text-align:center; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   </style>
 </head>
-
 <body class="bg-gray-900 text-gray-200">
   <div class="p-4">
     <div class="max-w-3xl mx-auto bg-gray-800 rounded-2xl shadow-lg p-6 space-y-6">
-
       <div id="setup-screen">
         <h1 class="text-3xl font-bold text-center text-white mb-2">Fyzika hrou</h1>
         <p class="text-center text-gray-400 mb-8">Procvičování úloh pro základní školy</p>
@@ -59,12 +48,12 @@
             <label for="topic-select" class="block text-lg font-semibold mb-3">3️⃣ Vyberte téma</label>
             <select id="topic-select" class="w-full p-3 rounded-xl bg-gray-900 border border-gray-700 focus:ring-2 focus:ring-blue-500">
               <option value="prace">Práce (W)</option>
-              <option value="vykon">Výkon (P)</option>
+              <option value="vykon" disabled>Výkon (P) — brzy</option>
             </select>
           </div>
 
           <div>
-            <button id="start-button" class="btn btn-primary w-full btn-disabled" disabled>Spustit</button>
+            <button id="start-button" class="btn btn-primary w-full">Spustit</button>
           </div>
         </div>
       </div>
@@ -91,6 +80,7 @@
           <button id="open-calculator-button" class="btn btn-secondary text-sm py-1 px-3">🧮 Kalkulačka</button>
         </div>
 
+        <!-- Krok 1: ZÁPIS -->
         <div id="zapis-step">
           <h3 class="text-lg font-semibold mb-3">1️⃣ Proveďte zápis</h3>
           <p class="text-sm text-gray-400 mb-4">Vyberte známé veličiny, doplňte hodnoty a jednotky. Označte hledanou veličinu.</p>
@@ -100,6 +90,7 @@
           <div id="zapis-feedback-container" class="mt-4"></div>
         </div>
 
+        <!-- Krok 2: VÝPOČET -->
         <div id="vypocet-step" class="hidden">
           <div id="zapis-review-container" class="p-4 bg-gray-900 border border-gray-700 rounded-xl mb-6"></div>
 
@@ -127,11 +118,7 @@
               <input id="result-lhs" class="mono p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="W / F / s">
               <span class="eq">=</span>
               <input id="result-rhs" class="mono p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="číslo" style="flex:1;">
-              <select id="unit-select" class="mono p-2 rounded-md bg-gray-800 border border-gray-700 ml-2">
-                <option value="J">J</option>
-                <option value="kJ">kJ</option>
-                <option value="MJ">MJ</option>
-              </select>
+              <select id="unit-select" class="mono p-2 rounded-md bg-gray-800 border border-gray-700 ml-2"></select>
               <div id="vypocet-tips" class="text-sm text-gray-400"></div>
             </div>
           </div>
@@ -141,7 +128,7 @@
         </div>
       </div>
 
-      <!-- MODÁLY (kalkulačka, vzorec, obrázek, nápověda) -->
+      <!-- MODÁLY (obsahy z JS) -->
       <div id="calculator-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
         <div class="bg-gray-800 rounded-2xl shadow-lg p-4 w-full max-w-xs space-y-4 relative">
           <button id="close-calculator-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
@@ -180,6 +167,6 @@
     </div>
   </div>
 
-  <script src="app_main_v31_unified.js?v=2025-11-03-1" defer></script>
+  <script src="app_main_v31_unified.js?v=2025-11-03-2" defer></script>
 </body>
 </html>

@@ -8,7 +8,7 @@
    (6) Fix výsledku: vždy počítáme očekávanou hodnotu z daných veličin
    ========================================================== */
 
-console.log("🧩 Načítání app_main_v29_unified.js ...");
+console.log("🧩 Načítání app_main_v29_unified.js  patched...");
 
 // -------------------- Pomocné zkratky --------------------
 const $  = (sel) => document.querySelector(sel);

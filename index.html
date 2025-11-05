@@ -5,42 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Fyzika pro ZŠ – Práce a výkon</title>
 
-  <!-- Tailwind (ponecháno kvůli stávajícímu projektu) -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Písmo -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 
-  <!-- Vlastní styl (volitelné) -->
-  <link rel="stylesheet" href="style.css"/>
   <style>
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
     .btn { border-radius: 0.75rem; padding: 0.5rem 1rem; transition: all 150ms; }
     .btn-primary { background: #2563eb; color:#fff; }
     .btn-primary:hover { background:#3b82f6; }
     .btn-secondary { background:#374151; color:#fff; }
     .btn-secondary:hover { background:#4b5563; }
     .btn-disabled { opacity:.5; cursor:not-allowed; }
-    .active-pick { box-shadow: 0 0 0 2px rgba(59,130,246,.8); background:#2563eb; color:#fff; }
     .feedback-wrong { background: rgba(127,29,29,.3); border:1px solid #7f1d1d; color:#fecaca; border-radius: 0.75rem; padding:0.75rem; }
-    .feedback-correct { background: rgba(20,83,45,.35); border:1px solid #166534; color:#bbf7d0; border-radius: 0.75rem; padding:0.75rem; }
   </style>
 
-<!-- PATCH: minimal layout helpers for calc rows -->
-<style id="calc-row-patch">
-  .calc-row { display:grid; grid-template-columns:max-content 16px 1fr max-content max-content; gap:8px; align-items:center; }
-  .calc-row .eq { text-align:center; }
-  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-</style>
-
+  <style id="calc-row-style">
+    .calc-row { display:grid; grid-template-columns:max-content 16px 1fr max-content max-content; gap:8px; align-items:center; }
+    .calc-row .eq { text-align:center; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  </style>
 </head>
 
-<body class="bg-gray-900 text-gray-200 font-inter">
-  <div class="app-container p-4">
-    <div class="main-card max-w-3xl mx-auto bg-gray-800 rounded-2xl shadow-lg p-6 space-y-6">
+<body class="bg-gray-900 text-gray-200">
+  <div class="p-4">
+    <div class="max-w-3xl mx-auto bg-gray-800 rounded-2xl shadow-lg p-6 space-y-6">
 
-      <!-- Úvodní obrazovka -->
       <div id="setup-screen">
         <h1 class="text-3xl font-bold text-center text-white mb-2">Fyzika hrou</h1>
         <p class="text-center text-gray-400 mb-8">Procvičování úloh pro základní školy</p>
@@ -77,7 +69,6 @@
         </div>
       </div>
 
-      <!-- Hlavní aplikace -->
       <div id="practice-screen" class="hidden">
         <div class="flex justify-between items-start mb-4">
           <div>
@@ -87,22 +78,19 @@
           <button id="new-problem-button" class="btn btn-secondary text-sm">Nový příklad</button>
         </div>
 
-        <!-- Zadání -->
-        <div id="problem-wrapper" class="mb-4">
-          <div id="problem-container" class="p-4 bg-gray-900 border border-dashed border-gray-600 rounded-xl">
+        <div class="mb-4">
+          <div class="p-4 bg-gray-900 border border-dashed border-gray-600 rounded-xl">
             <p id="problem-text" class="text-lg leading-relaxed"></p>
           </div>
         </div>
 
-        <!-- Nástroje -->
-        <div id="tools-container" class="flex flex-wrap justify-end gap-2 mb-6">
+        <div class="flex flex-wrap justify-end gap-2 mb-6">
           <button id="open-diagram-button" class="btn btn-secondary text-sm py-1 px-3">🖼 Obrázek</button>
           <button id="open-formula-button" class="btn btn-secondary text-sm py-1 px-3">📐 Vzorec</button>
           <button id="open-help-button" class="btn btn-secondary text-sm py-1 px-3">💡 Nápověda</button>
           <button id="open-calculator-button" class="btn btn-secondary text-sm py-1 px-3">🧮 Kalkulačka</button>
         </div>
 
-        <!-- Krok 1: Zápis -->
         <div id="zapis-step">
           <h3 class="text-lg font-semibold mb-3">1️⃣ Proveďte zápis</h3>
           <p class="text-sm text-gray-400 mb-4">Vyberte známé veličiny, doplňte hodnoty a jednotky. Označte hledanou veličinu.</p>
@@ -112,69 +100,86 @@
           <div id="zapis-feedback-container" class="mt-4"></div>
         </div>
 
-  <!-- Krok 2: Výpočet (čistý, bez starých single-inputů) -->
-<div id="vypocet-step" class="hidden">
-  <!-- shrnutí zápisu -->
-  <div id="zapis-review-container" class="p-4 bg-gray-900 border border-gray-700 rounded-xl mb-6"></div>
+        <div id="vypocet-step" class="hidden">
+          <div id="zapis-review-container" class="p-4 bg-gray-900 border border-gray-700 rounded-xl mb-6"></div>
 
-  <!-- nový výpočetní box vykreslí skript app_final_calc_v26.js -->
-  <div id="calc-box-v26"></div>
+          <div class="p-4 bg-gray-900 border border-gray-700 rounded-xl mb-3">
+            <div class="text-sm text-gray-400 mb-2">Vzorec</div>
+            <div class="calc-row">
+              <input id="formula-lhs" class="mono p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="W / F / s">
+              <span class="eq">=</span>
+              <input id="formula-rhs" class="mono p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="F*s | W/s | W/F">
+            </div>
+          </div>
 
-  <button id="check-calculation-button" class="btn btn-primary w-full mt-2">
-    Ověřit výpočet
-  </button>
+          <div class="p-4 bg-gray-900 border border-gray-700 rounded-xl mb-3">
+            <div class="text-sm text-gray-400 mb-2">Dosazení</div>
+            <div class="calc-row">
+              <input id="subs-lhs" class="mono p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="W / F / s">
+              <span class="eq">=</span>
+              <input id="subs-rhs" class="mono p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="např. 500*2 nebo 1000/2">
+            </div>
+          </div>
 
-  <div id="vypocet-feedback-container" class="mt-3"></div>
-</div>
+          <div class="p-4 bg-gray-900 border border-gray-700 rounded-xl mb-2">
+            <div class="text-sm text-gray-400 mb-2">Výsledek</div>
+            <div class="calc-row">
+              <input id="result-lhs" class="mono p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="W / F / s">
+              <span class="eq">=</span>
+              <input id="result-rhs" class="mono p-2 rounded-md bg-gray-800 border border-gray-700" placeholder="číslo" style="flex:1;">
+              <select id="unit-select" class="mono p-2 rounded-md bg-gray-800 border border-gray-700 ml-2">
+                <option value="J">J</option>
+                <option value="kJ">kJ</option>
+                <option value="MJ">MJ</option>
+              </select>
+              <div id="vypocet-tips" class="text-sm text-gray-400"></div>
+            </div>
+          </div>
 
-
-  <!-- MODÁLY -->
-  <!-- Kalkulačka -->
-  <div id="calculator-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-800 rounded-2xl shadow-lg p-4 w-full max-w-xs space-y-4 relative">
-      <button id="close-calculator-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-      <div class="bg-gray-900 rounded-lg p-4 text-right">
-        <div id="calculator-history" class="text-gray-500 text-sm h-6 mb-1 overflow-x-auto"></div>
-        <div id="calculator-display" class="text-white text-4xl font-light break-all">0</div>
+          <button id="check-calculation-button" class="btn btn-primary w-full mt-2">Ověřit výpočet</button>
+          <div id="vypocet-feedback-container" class="mt-3"></div>
+        </div>
       </div>
-      <div id="calculator-buttons" class="grid grid-cols-4 gap-2"></div>
+
+      <!-- MODÁLY (kalkulačka, vzorec, obrázek, nápověda) -->
+      <div id="calculator-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-lg p-4 w-full max-w-xs space-y-4 relative">
+          <button id="close-calculator-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+          <div class="bg-gray-900 rounded-lg p-4 text-right">
+            <div id="calculator-history" class="text-gray-500 text-sm h-6 mb-1 overflow-x-auto"></div>
+            <div id="calculator-display" class="text-white text-4xl font-light break-all">0</div>
+          </div>
+          <div id="calculator-buttons" class="grid grid-cols-4 gap-2"></div>
+        </div>
+      </div>
+
+      <div id="formula-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 relative text-center">
+          <button id="close-formula-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+          <h3 class="text-xl font-semibold text-white mb-4">Vzorec</h3>
+          <div id="formula-svg-container" class="flex justify-center items-center"></div>
+        </div>
+      </div>
+
+      <div id="diagram-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 relative text-center">
+          <button id="close-diagram-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+          <h3 id="diagram-title" class="text-xl font-semibold text-white mb-4">Obrázek</h3>
+          <div id="diagram-svg-container" class="flex justify-center items-center"></div>
+        </div>
+      </div>
+
+      <div id="help-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-sm space-y-4 relative text-center">
+          <button id="close-help-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+          <h3 class="text-xl font-semibold text-white mb-4">Nápověda</h3>
+          <div id="help-content" class="text-gray-200 text-sm leading-relaxed"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <!-- Vzorec -->
-  <div id="formula-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 relative text-center">
-      <button id="close-formula-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-      <h3 class="text-xl font-semibold text-white mb-4">Vzorec</h3>
-      <div id="formula-svg-container" class="flex justify-center items-center"></div>
-    </div>
-  </div>
-
-  <!-- Obrázek -->
-  <div id="diagram-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-md space-y-4 relative text-center">
-      <button id="close-diagram-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-      <h3 id="diagram-title" class="text-xl font-semibold text-white mb-4">Obrázek</h3>
-      <div id="diagram-svg-container" class="flex justify-center items-center"></div>
-    </div>
-  </div>
-
-  <!-- Nápověda -->
-  <div id="help-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-    <div class="bg-gray-800 rounded-2xl shadow-lg p-6 w-full max-w-sm space-y-4 relative text-center">
-      <button id="close-help-button" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-      <h3 class="text-xl font-semibold text-white mb-4">Nápověda</h3>
-      <div id="help-content" class="text-gray-200 text-sm leading-relaxed"></div>
-    </div>
-  </div>
-
-  <!-- JS -->
-<script src="app_main_v29_unified.js - defer"></script>
-<script src="app_main_v29_unified_patched.js - defer"></script>
-
-
-
-
-
+  <script src="app_main_v31_unified.js?v=2025-11-03-1" defer></script>
 </body>
 </html>

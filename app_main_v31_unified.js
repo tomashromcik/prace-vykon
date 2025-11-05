@@ -8,7 +8,7 @@
    (6) Fix výsledku: vždy počítáme očekávanou hodnotu z daných veličin
    ========================================================== */
 
-console.log("🧩 Načítání app_main_v31_unified.js  patched...");
+console.log("🧩 Načítání app_main_v31_unified.js  patched 1.1...");
 
 // -------------------- Pomocné zkratky --------------------
 const $  = (sel) => document.querySelector(sel);
@@ -796,3 +796,83 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+
+
+/* v31 HOTFIX: askFor-aware seeding + first-key overwrite + formula hints + tighter calc layout */
+(function(){
+  'use strict';
+  function whenReady(cb){
+    let i=0; const t=setInterval(function(){
+      const App = window.__FyzikaApp || window.App;
+      if (App && App.state && App.els) { clearInterval(t); cb(App); }
+      else if (++i>200) clearInterval(t);
+    },100);
+  }
+  whenReady(function(App){
+    // helper: make first keypress replace seeded value
+    App.attachOverwrite = function(input, initValue){
+      if (!input) return;
+      input.value = initValue;
+      input.dataset.pristine = '1';
+      input.addEventListener('focus', () => input.select(), { once:true });
+      input.addEventListener('keydown', (e) => {
+        if (input.dataset.pristine === '1') {
+          if (e.key.length === 1) { input.value = e.key; input.dataset.pristine = '0'; e.preventDefault(); }
+          else { input.dataset.pristine = '0'; }
+        }
+      });
+      input.addEventListener('input', () => { input.dataset.pristine = '0'; }, { once:true });
+    };
+
+    // layout for calc rows (so inputs hug "=" and RHS stretches)
+    App.applyCalcLayout = function(){
+      const row = (el) => el && el.parentElement;
+      const setRow = (R, withUnit=false) => {
+        if (!R) return;
+        R.style.display='grid';
+        R.style.gap='8px';
+        R.style.alignItems='center';
+        R.style.gridTemplateColumns = withUnit ? 'max-content 16px 1fr max-content 1fr' : 'max-content 16px 1fr';
+        const eq = R.querySelector('.eq') || R.children[1]; if (eq) { eq.textContent='='; eq.style.textAlign='center'; }
+      };
+      setRow(row(App.els.formulaLHS));
+      setRow(row(App.els.subsLHS));
+      setRow(row(App.els.resultLHS), true);
+      if (App.els.formulaLHS) App.els.formulaLHS.style.width='72px';
+      if (App.els.subsLHS) App.els.subsLHS.style.width='72px';
+      if (App.els.resultLHS) App.els.resultLHS.style.width='72px';
+      if (App.els.unitSelect) App.els.unitSelect.style.minWidth='84px';
+      if (App.els.vypocetTips) { App.els.vypocetTips.style.justifySelf='end'; App.els.vypocetTips.style.opacity='.85'; }
+    };
+
+    // override seeding so it respects askFor and is editable immediately
+    const origSeed = App.seedVypocetFields && App.seedVypocetFields.bind(App);
+    App.seedVypocetFields = function(){
+      const ask = this.state?.askFor || 'W';
+      const rhsHint = { W:'F*s', F:'W/s', s:'W/F' }[ask];
+      const subsHint = { W:'např. 500*2 nebo 1000*2', F:'např. 1000/2', s:'např. 1000/500' }[ask];
+
+      if (this.els.formulaLHS) this.attachOverwrite(this.els.formulaLHS, ask);
+      if (this.els.formulaRHS) { this.els.formulaRHS.value = ''; this.els.formulaRHS.placeholder = rhsHint; }
+
+      if (this.els.subsLHS) this.attachOverwrite(this.els.subsLHS, ask);
+      if (this.els.subsRHS) { this.els.subsRHS.value = ''; this.els.subsRHS.placeholder = subsHint; }
+
+      if (this.els.resultLHS) this.attachOverwrite(this.els.resultLHS, ask);
+      if (this.els.resultRHS) this.els.resultRHS.value = '';
+      if (this.els.unitSelect) this.els.unitSelect.value = (ask==='W'?'J':ask==='F'?'N':'m');
+
+      if (typeof this.renderVypocetTips === 'function') this.renderVypocetTips('Vzorec trojúhelník: W nahoře, F·s dole.');
+    };
+
+    // ensure layout gets applied when entering calc
+    const origEnter = App.enterVypocet && App.enterVypocet.bind(App);
+    App.enterVypocet = function(){
+      if (origEnter) origEnter();
+      this.applyCalcLayout();
+    };
+
+    // also apply now in case we're already there
+    App.applyCalcLayout();
+  });
+})();

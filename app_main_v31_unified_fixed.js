@@ -124,6 +124,20 @@
       [this.els.formulaLHS,this.els.formulaRHS,this.els.subsLHS,this.els.subsRHS,this.els.resultLHS,this.els.resultRHS,this.els.unitSelect]
         .forEach(el=> el?.addEventListener('input', ()=>this.validateVypocetLive()));
       this.els.btnCheckCalc?.addEventListener('click', ()=> this.validateVypocetLive());
+    
+      // exklusivní výběr "Hledaná veličina" v zápisu
+      this.els.zapisContainer?.addEventListener('change', (ev)=>{
+        const t = ev.target;
+        if (t && t.classList && t.classList.contains('z-ask')){
+          if (t.checked){
+            // odškrtnout ostatní
+            $$('#zapis-container .z-ask').forEach(cb => { if (cb!==t) cb.checked=false; });
+            const row = t.closest('.grid');
+            const sym = $('.z-sym', row)?.value || this.state.askFor || 'W';
+            this.state.askFor = sym;
+          }
+        }
+      });
     },
 
     showPractice(){ this.els.setup?.classList.add('hidden'); this.els.practice?.classList.remove('hidden'); },
@@ -225,22 +239,25 @@
         if(sym==='s'){ val.value=p.givens.s; unit.value='m'; }
         if(sym==='W'){ val.value=''; val.placeholder='?'; unit.value='J'; }
         ask.checked = (sym===p.askFor);
+        if (sym!==p.askFor) { /* jistota: jen jeden */ }
       });
     },
 
     // ---------- validace zápisu ----------
     validateZapis(){
-      const rows=$$('#zapis-container .grid'); const g={}; let asked=null;
+      const rows=$$('#zapis-container .grid'); const g={}; let asked=null; let askCount=0;
       rows.forEach(r=>{
         const sym=$('.z-sym',r).value;
         const isAsk=$('.z-ask',r).checked;
         const unit=$('.z-unit',r).value;
         const valStr=$('.z-val',r).value;
-        if(isAsk){ asked=sym; return; }
+        if(isAsk){ asked=sym; askCount++; } else {
         const val=parseNum(valStr);
         const base=toBase(val, unit|| (sym==='F'?'N':sym==='s'?'m':'J'));
-        g[sym]=base;
+        g[sym]=base; }
       });
+      if (askCount!==1) errs.push('Označte právě jednu hledanou veličinu.');
+      if (!asked) asked=this.state.askFor;
       const p=this.state.problem;
       const errs=[];
       if(asked!==this.state.askFor) errs.push('Označte správnou hledanou veličinu.');
